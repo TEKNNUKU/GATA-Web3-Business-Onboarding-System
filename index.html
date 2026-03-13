@@ -1,0 +1,2764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GATA Web3 Onboarding — 1Billion2Web3</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+<!-- Firebase SDKs (v10 compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS & RESET
+═══════════════════════════════════════════ */
+:root {
+  --bg-base:        #05080F;
+  --bg-card:        #0C1220;
+  --bg-card-hover:  #111A2E;
+  --bg-panel:       #080E1A;
+  --border:         #1A2A45;
+  --border-glow:    #1E3A5F;
+
+  --gold:           #F0A500;
+  --gold-dim:       #B87800;
+  --gold-glow:      rgba(240,165,0,0.18);
+  --gold-bright:    #FFD166;
+
+  --teal:           #00CFCF;
+  --teal-dim:       #008E8E;
+  --teal-glow:      rgba(0,207,207,0.12);
+
+  --green:          #22D98A;
+  --red:            #FF5A5F;
+  --purple:         #9B6DFF;
+
+  --text-primary:   #EAF2FF;
+  --text-secondary: #7A9CC0;
+  --text-muted:     #3A5470;
+
+  --font-display:   'Syne', sans-serif;
+  --font-body:      'DM Sans', sans-serif;
+  --font-mono:      'Space Mono', monospace;
+
+  --radius:         10px;
+  --radius-lg:      16px;
+  --nav-width:      260px;
+  --transition:     0.22s ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; scroll-behavior: smooth; }
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+a { color: var(--gold); text-decoration: none; }
+button { cursor: pointer; border: none; outline: none; font-family: var(--font-body); }
+input, textarea, select { font-family: var(--font-body); outline: none; }
+img { max-width: 100%; }
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 10px; }
+
+/* ═══════════════════════════════════════════
+   GLOBAL BG GRID
+═══════════════════════════════════════════ */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,207,207,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,207,207,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  top: -30vh; right: -20vw;
+  width: 70vw; height: 70vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240,165,0,0.05) 0%, transparent 65%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ═══════════════════════════════════════════
+   LOADING SCREEN
+═══════════════════════════════════════════ */
+#loading-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg-base);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1.5rem;
+}
+.loader-logo {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 2px;
+  animation: pulse 1.5s ease infinite;
+}
+.loader-bar {
+  width: 200px; height: 3px;
+  background: var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.loader-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--teal));
+  border-radius: 10px;
+  animation: load 1.8s ease forwards;
+}
+@keyframes load { from { width: 0% } to { width: 100% } }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* ═══════════════════════════════════════════
+   AUTH VIEW
+═══════════════════════════════════════════ */
+#auth-view {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 2rem; position: relative; z-index: 1;
+}
+.auth-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2.5rem;
+  width: 100%; max-width: 440px;
+  position: relative;
+  box-shadow: 0 0 60px rgba(240,165,0,0.06);
+  animation: fadeUp 0.5s ease;
+}
+.auth-card::before {
+  content: '';
+  position: absolute; top: 0; left: 10%; right: 10%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), var(--teal), transparent);
+  border-radius: 10px;
+}
+.auth-brand {
+  text-align: center; margin-bottom: 2rem;
+}
+.auth-brand .brand-mark {
+  display: inline-block;
+  width: 64px; height: 64px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 1.6rem; color: #050A0F;
+  margin: 0 auto 1rem;
+  box-shadow: 0 0 30px var(--gold-glow);
+}
+.auth-brand h1 {
+  font-family: var(--font-display);
+  font-size: 1.5rem; font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+.auth-brand p {
+  color: var(--text-secondary);
+  font-size: 0.85rem; margin-top: 0.3rem;
+}
+.auth-tabs {
+  display: flex; gap: 0; margin-bottom: 1.8rem;
+  background: var(--bg-panel);
+  border-radius: var(--radius); padding: 4px;
+  border: 1px solid var(--border);
+}
+.auth-tab {
+  flex: 1; padding: 0.6rem;
+  font-size: 0.875rem; font-weight: 600;
+  border-radius: 8px;
+  background: transparent; color: var(--text-secondary);
+  transition: var(--transition);
+}
+.auth-tab.active {
+  background: var(--gold);
+  color: #050A0F;
+}
+.form-group { margin-bottom: 1.2rem; }
+.form-group label {
+  display: block; font-size: 0.8rem;
+  font-weight: 600; color: var(--text-secondary);
+  letter-spacing: 0.5px; text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+.form-group input {
+  width: 100%; padding: 0.75rem 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text-primary);
+  font-size: 0.9rem; transition: var(--transition);
+}
+.form-group input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+.btn-primary {
+  width: 100%; padding: 0.85rem;
+  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  color: #050A0F; font-weight: 700; font-size: 0.95rem;
+  border-radius: var(--radius);
+  transition: var(--transition);
+  letter-spacing: 0.3px;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px var(--gold-glow);
+}
+.auth-divider {
+  display: flex; align-items: center; gap: 1rem;
+  margin: 1.2rem 0; color: var(--text-muted); font-size: 0.8rem;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.btn-google {
+  width: 100%; padding: 0.8rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text-primary);
+  font-size: 0.9rem; font-weight: 500;
+  display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+  transition: var(--transition);
+}
+.btn-google:hover { border-color: var(--teal); background: var(--bg-card-hover); }
+.auth-error {
+  background: rgba(255,90,95,0.1); border: 1px solid rgba(255,90,95,0.3);
+  border-radius: var(--radius); padding: 0.7rem 1rem;
+  color: var(--red); font-size: 0.85rem; margin-bottom: 1rem;
+  display: none;
+}
+
+/* ═══════════════════════════════════════════
+   APP SHELL (authenticated)
+═══════════════════════════════════════════ */
+#app-shell {
+  display: none;
+  min-height: 100vh;
+  position: relative; z-index: 1;
+}
+#app-shell.visible {
+  display: flex;
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR NAV
+═══════════════════════════════════════════ */
+#sidebar {
+  width: var(--nav-width);
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0;
+  height: 100vh; z-index: 100;
+  overflow-y: auto;
+  transition: transform var(--transition);
+}
+.sidebar-brand {
+  padding: 1.5rem 1.2rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.brand-inner {
+  display: flex; align-items: center; gap: 0.7rem;
+}
+.brand-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800;
+  font-size: 1rem; color: #050A0F;
+  flex-shrink: 0;
+  box-shadow: 0 0 16px var(--gold-glow);
+}
+.brand-text .brand-name {
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 1.05rem;
+  color: var(--text-primary); letter-spacing: 0.5px;
+}
+.brand-text .brand-sub {
+  font-size: 0.72rem; color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Sidebar wallet strip */
+.sidebar-wallet {
+  margin: 1rem 1rem 0;
+  background: linear-gradient(135deg, rgba(240,165,0,0.1), rgba(240,165,0,0.04));
+  border: 1px solid rgba(240,165,0,0.25);
+  border-radius: var(--radius); padding: 0.9rem 1rem;
+  cursor: pointer; transition: var(--transition);
+}
+.sidebar-wallet:hover { border-color: var(--gold); }
+.sw-label { font-size: 0.72rem; color: var(--gold-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.sw-points {
+  font-family: var(--font-display);
+  font-size: 1.6rem; font-weight: 800;
+  color: var(--gold); letter-spacing: 1px;
+  line-height: 1.2;
+}
+.sw-sub { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.15rem; }
+
+/* Nav links */
+.nav-section { padding: 1rem 0.8rem 0; }
+.nav-label {
+  font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--text-muted); padding: 0 0.4rem;
+  margin-bottom: 0.4rem;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.65rem 0.8rem; border-radius: var(--radius);
+  color: var(--text-secondary); font-size: 0.88rem; font-weight: 500;
+  cursor: pointer; transition: var(--transition); margin-bottom: 2px;
+  border: 1px solid transparent;
+}
+.nav-item:hover {
+  background: var(--bg-card-hover); color: var(--text-primary);
+}
+.nav-item.active {
+  background: var(--gold-glow); color: var(--gold);
+  border-color: rgba(240,165,0,0.25);
+  font-weight: 600;
+}
+.nav-item .nav-icon { width: 18px; text-align: center; flex-shrink: 0; font-size: 1rem; }
+.nav-item .nav-badge {
+  margin-left: auto;
+  background: var(--gold); color: #050A0F;
+  font-size: 0.65rem; font-weight: 800;
+  padding: 1px 6px; border-radius: 20px;
+  font-family: var(--font-mono);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+}
+.user-pill {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.6rem;
+}
+.user-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal-dim), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.85rem; color: #fff; flex-shrink: 0;
+}
+.user-info .user-name {
+  font-size: 0.85rem; font-weight: 600; color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 150px;
+}
+.user-info .user-email {
+  font-size: 0.7rem; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 150px;
+}
+.btn-logout {
+  background: transparent;
+  color: var(--text-muted); font-size: 0.78rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 6px; margin-top: 0.5rem;
+  width: 100%; transition: var(--transition);
+}
+.btn-logout:hover { color: var(--red); border-color: var(--red); }
+
+/* Mobile hamburger */
+.hamburger {
+  display: none;
+  position: fixed; top: 1rem; left: 1rem; z-index: 200;
+  width: 40px; height: 40px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 10px;
+  align-items: center; justify-content: center;
+  font-size: 1.2rem; cursor: pointer;
+  color: var(--text-primary);
+}
+.sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 99;
+  background: rgba(5,8,15,0.7);
+  backdrop-filter: blur(3px);
+}
+
+/* ═══════════════════════════════════════════
+   MAIN CONTENT AREA
+═══════════════════════════════════════════ */
+#main-content {
+  margin-left: var(--nav-width);
+  flex: 1; padding: 2rem;
+  min-height: 100vh;
+}
+.view { display: none; animation: fadeUp 0.35s ease; }
+.view.active { display: block; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Page header */
+.page-header {
+  margin-bottom: 2rem;
+}
+.page-header .breadcrumb {
+  font-size: 0.75rem; color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-bottom: 0.4rem; text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.page-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.9rem; font-weight: 800;
+  color: var(--text-primary); line-height: 1.1;
+}
+.page-header p {
+  color: var(--text-secondary); margin-top: 0.4rem;
+  font-size: 0.9rem; max-width: 600px;
+}
+
+/* ═══════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════ */
+.welcome-banner {
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(240,165,0,0.06) 100%);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-lg); padding: 1.8rem 2rem;
+  margin-bottom: 1.5rem;
+  position: relative; overflow: hidden;
+}
+.welcome-banner::after {
+  content: '⬡';
+  position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%);
+  font-size: 6rem; color: rgba(240,165,0,0.04);
+  font-family: var(--font-mono);
+}
+.welcome-banner h3 {
+  font-family: var(--font-display);
+  font-size: 1.3rem; font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+.welcome-banner p { color: var(--text-secondary); font-size: 0.88rem; max-width: 500px; }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem; margin-bottom: 1.5rem;
+}
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.3rem 1.5rem;
+  transition: var(--transition);
+}
+.stat-card:hover { border-color: var(--border-glow); transform: translateY(-2px); }
+.stat-card .stat-label {
+  font-size: 0.75rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text-muted); margin-bottom: 0.5rem;
+}
+.stat-card .stat-value {
+  font-family: var(--font-display);
+  font-size: 2rem; font-weight: 800;
+  line-height: 1;
+}
+.stat-card .stat-sub {
+  font-size: 0.75rem; color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+.stat-gold .stat-value { color: var(--gold); }
+.stat-teal .stat-value { color: var(--teal); }
+.stat-green .stat-value { color: var(--green); }
+.stat-purple .stat-value { color: var(--purple); }
+
+/* Overall progress bar */
+.progress-section { margin-bottom: 1.5rem; }
+.progress-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+.progress-label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
+.progress-pct {
+  font-family: var(--font-mono);
+  font-size: 0.85rem; color: var(--gold);
+}
+.progress-track {
+  height: 8px; background: var(--border);
+  border-radius: 10px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--teal));
+  border-radius: 10px;
+  transition: width 0.8s ease;
+}
+
+/* Module cards grid */
+.modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+.module-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.4rem;
+  cursor: pointer; transition: var(--transition);
+  position: relative; overflow: hidden;
+}
+.module-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  opacity: 0; transition: var(--transition);
+}
+.module-card:hover { border-color: var(--gold-dim); transform: translateY(-2px); }
+.module-card:hover::before { opacity: 1; }
+.module-card.completed { border-color: rgba(34,217,138,0.3); }
+.module-card.completed::before {
+  background: linear-gradient(90deg, var(--green), transparent);
+  opacity: 1;
+}
+.module-card.locked { opacity: 0.5; cursor: not-allowed; }
+.module-card.locked:hover { transform: none; border-color: var(--border); }
+
+.mc-top {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+.mc-num {
+  font-family: var(--font-mono);
+  font-size: 0.72rem; color: var(--text-muted);
+  font-weight: 700; letter-spacing: 1px;
+}
+.mc-badge {
+  font-size: 0.7rem; font-weight: 700;
+  padding: 3px 8px; border-radius: 20px;
+  white-space: nowrap;
+}
+.badge-done { background: rgba(34,217,138,0.15); color: var(--green); }
+.badge-active { background: rgba(240,165,0,0.15); color: var(--gold); }
+.badge-locked { background: rgba(106,139,160,0.15); color: var(--text-muted); }
+
+.mc-title {
+  font-family: var(--font-display);
+  font-size: 1rem; font-weight: 700;
+  color: var(--text-primary); margin-bottom: 0.4rem;
+  line-height: 1.3;
+}
+.mc-desc {
+  font-size: 0.82rem; color: var(--text-secondary);
+  line-height: 1.5; margin-bottom: 0.9rem;
+}
+.mc-footer {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.mc-lessons {
+  font-size: 0.75rem; color: var(--text-muted);
+}
+.mc-points {
+  font-family: var(--font-mono);
+  font-size: 0.8rem; font-weight: 700;
+  color: var(--gold);
+}
+
+/* ═══════════════════════════════════════════
+   MODULE DETAIL VIEW
+═══════════════════════════════════════════ */
+.back-btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: transparent; color: var(--text-secondary);
+  font-size: 0.85rem; padding: 0.5rem 0;
+  margin-bottom: 1.5rem; transition: var(--transition);
+}
+.back-btn:hover { color: var(--gold); }
+
+.module-hero {
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-panel));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 2rem;
+  margin-bottom: 1.5rem; position: relative; overflow: hidden;
+}
+.module-hero::after {
+  content: attr(data-number);
+  position: absolute; right: 2rem; top: 50%; transform: translateY(-50%);
+  font-family: var(--font-display); font-size: 8rem; font-weight: 800;
+  color: rgba(240,165,0,0.04); pointer-events: none;
+  line-height: 1;
+}
+.mh-mod-num {
+  font-family: var(--font-mono); font-size: 0.75rem;
+  color: var(--gold-dim); letter-spacing: 1px; margin-bottom: 0.5rem;
+}
+.mh-title {
+  font-family: var(--font-display);
+  font-size: 1.8rem; font-weight: 800;
+  margin-bottom: 0.6rem; line-height: 1.2;
+}
+.mh-desc { color: var(--text-secondary); max-width: 560px; line-height: 1.6; }
+.mh-meta {
+  display: flex; gap: 1.5rem; margin-top: 1.2rem;
+  flex-wrap: wrap;
+}
+.mh-meta-item {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.8rem; color: var(--text-secondary);
+}
+.mh-meta-item span:first-child { font-size: 1rem; }
+.mh-meta-item strong { color: var(--text-primary); }
+
+/* Lessons list */
+.lessons-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.lesson-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.2rem 1.4rem;
+  display: flex; align-items: center; gap: 1rem;
+  cursor: pointer; transition: var(--transition);
+}
+.lesson-card:hover { border-color: var(--gold-dim); background: var(--bg-card-hover); }
+.lesson-card.completed { border-color: rgba(34,217,138,0.25); }
+.lesson-card.locked { opacity: 0.45; cursor: not-allowed; }
+.lesson-card.locked:hover { background: var(--bg-card); border-color: var(--border); }
+
+.lc-status-icon {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+}
+.lc-status-icon.done { background: rgba(34,217,138,0.15); color: var(--green); }
+.lc-status-icon.active { background: var(--gold-glow); color: var(--gold); }
+.lc-status-icon.locked { background: var(--border); color: var(--text-muted); }
+
+.lc-info { flex: 1; }
+.lc-title { font-weight: 600; color: var(--text-primary); font-size: 0.9rem; margin-bottom: 0.15rem; }
+.lc-subtitle { font-size: 0.78rem; color: var(--text-muted); }
+
+.lc-arrow { color: var(--text-muted); font-size: 1rem; }
+.lesson-card:not(.locked):hover .lc-arrow { color: var(--gold); }
+
+/* ═══════════════════════════════════════════
+   LESSON VIEW
+═══════════════════════════════════════════ */
+.lesson-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1.5rem;
+}
+@media(max-width: 900px) {
+  .lesson-layout { grid-template-columns: 1fr; }
+}
+
+.video-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden; margin-bottom: 1rem;
+}
+.video-placeholder {
+  aspect-ratio: 16/9;
+  background: linear-gradient(135deg, #050A0F, #0C1A30);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1rem;
+  position: relative; overflow: hidden;
+}
+.video-placeholder::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    45deg, transparent, transparent 10px,
+    rgba(240,165,0,0.02) 10px, rgba(240,165,0,0.02) 11px
+  );
+}
+.vp-icon { font-size: 3.5rem; opacity: 0.7; }
+.vp-text { color: var(--text-secondary); font-size: 0.85rem; text-align: center; z-index: 1; }
+.vp-url {
+  font-family: var(--font-mono); font-size: 0.72rem;
+  color: var(--teal-dim); background: rgba(0,207,207,0.07);
+  padding: 4px 10px; border-radius: 6px; z-index: 1;
+  max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+video {
+  width: 100%; display: block;
+  background: #000; max-height: 450px;
+}
+
+.lesson-controls {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.9rem 1.2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 0.7rem;
+}
+.lc-time-saved {
+  font-size: 0.78rem; color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.btn-complete {
+  background: var(--green); color: #050A0F;
+  font-weight: 700; font-size: 0.85rem;
+  padding: 0.6rem 1.4rem; border-radius: var(--radius);
+  transition: var(--transition);
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(34,217,138,0.25); }
+.btn-complete:disabled { background: var(--text-muted); cursor: not-allowed; transform: none; }
+
+/* Lesson content */
+.lesson-content-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.8rem;
+}
+.lesson-content-card h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem; font-weight: 700;
+  margin-bottom: 1rem; color: var(--gold);
+  padding-bottom: 0.7rem; border-bottom: 1px solid var(--border);
+}
+.lesson-summary {
+  font-size: 0.9rem; line-height: 1.75;
+  color: var(--text-secondary);
+}
+.lesson-summary p { margin-bottom: 0.8rem; }
+.lesson-summary ul { padding-left: 1.2rem; }
+.lesson-summary li { margin-bottom: 0.4rem; }
+.lesson-summary li::marker { color: var(--gold); }
+.lesson-summary strong { color: var(--text-primary); font-weight: 600; }
+
+/* Lesson sidebar */
+.lesson-sidebar {}
+.ls-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.4rem;
+  margin-bottom: 1rem;
+}
+.ls-card h4 {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 0.9rem; margin-bottom: 1rem;
+  padding-bottom: 0.6rem; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.lesson-nav-item {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.6rem 0.8rem; border-radius: 8px;
+  font-size: 0.82rem; cursor: pointer;
+  transition: var(--transition); color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+.lesson-nav-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.lesson-nav-item.current { background: var(--gold-glow); color: var(--gold); font-weight: 600; }
+.lesson-nav-item.completed-lesson { color: var(--green); }
+.lesson-nav-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+/* Reward toast */
+.points-toast {
+  position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999;
+  background: linear-gradient(135deg, #1A2A0A, #0F1A06);
+  border: 1px solid rgba(34,217,138,0.4);
+  border-radius: var(--radius-lg); padding: 1rem 1.5rem;
+  display: flex; align-items: center; gap: 0.8rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  transform: translateX(150%);
+  transition: transform 0.4s cubic-bezier(.34,1.56,.64,1);
+  min-width: 240px;
+}
+.points-toast.show { transform: translateX(0); }
+.pt-icon { font-size: 1.8rem; }
+.pt-main { font-family: var(--font-display); font-weight: 800; font-size: 1rem; color: var(--green); }
+.pt-sub { font-size: 0.75rem; color: var(--text-secondary); }
+
+/* ═══════════════════════════════════════════
+   QUIZ VIEW
+═══════════════════════════════════════════ */
+.quiz-container {
+  max-width: 680px; margin: 0 auto;
+}
+.quiz-header {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--purple);
+  border-radius: var(--radius-lg); padding: 1.8rem;
+  margin-bottom: 1.5rem; text-align: center;
+}
+.quiz-header .quiz-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.quiz-header h2 {
+  font-family: var(--font-display); font-size: 1.4rem;
+  font-weight: 800; margin-bottom: 0.3rem;
+}
+.quiz-header p { color: var(--text-secondary); font-size: 0.88rem; }
+
+.quiz-progress-bar {
+  height: 4px; background: var(--border);
+  border-radius: 10px; margin-bottom: 2rem; overflow: hidden;
+}
+.quiz-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--purple), var(--teal));
+  transition: width 0.4s ease;
+}
+
+.question-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 2rem;
+  margin-bottom: 1rem;
+}
+.q-number {
+  font-family: var(--font-mono); font-size: 0.75rem;
+  color: var(--purple); letter-spacing: 1px;
+  margin-bottom: 0.7rem;
+}
+.q-text {
+  font-family: var(--font-display); font-size: 1.1rem;
+  font-weight: 700; margin-bottom: 1.4rem; line-height: 1.4;
+}
+.options { display: flex; flex-direction: column; gap: 0.6rem; }
+.option {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.9rem 1.2rem;
+  cursor: pointer; transition: var(--transition);
+  font-size: 0.88rem; display: flex; align-items: center; gap: 0.8rem;
+}
+.option:hover { border-color: var(--purple); background: rgba(155,109,255,0.06); }
+.option.selected { border-color: var(--purple); background: rgba(155,109,255,0.12); color: var(--text-primary); }
+.option.correct { border-color: var(--green); background: rgba(34,217,138,0.1); color: var(--green); }
+.option.wrong { border-color: var(--red); background: rgba(255,90,95,0.1); color: var(--red); }
+.option-letter {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--border); color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+  font-family: var(--font-mono);
+}
+.option.selected .option-letter { background: var(--purple); color: #fff; }
+.option.correct .option-letter { background: var(--green); color: #050A0F; }
+.option.wrong .option-letter { background: var(--red); color: #fff; }
+
+.quiz-actions {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 1rem;
+}
+.btn-quiz-next {
+  background: var(--purple); color: #fff;
+  font-weight: 700; font-size: 0.9rem;
+  padding: 0.75rem 1.8rem; border-radius: var(--radius);
+  transition: var(--transition);
+}
+.btn-quiz-next:hover { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(155,109,255,0.35); }
+.btn-quiz-next:disabled { background: var(--text-muted); cursor: not-allowed; transform: none; }
+.q-counter { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); }
+
+/* Quiz result */
+.quiz-result {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 2.5rem;
+  text-align: center;
+}
+.qr-score-ring {
+  width: 120px; height: 120px; border-radius: 50%;
+  border: 4px solid var(--border);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  margin: 0 auto 1.5rem;
+}
+.qr-score-ring.pass { border-color: var(--green); box-shadow: 0 0 30px rgba(34,217,138,0.2); }
+.qr-score-ring.fail { border-color: var(--red); }
+.qr-score { font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; }
+.qr-score.pass { color: var(--green); }
+.qr-score.fail { color: var(--red); }
+.qr-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; }
+.qr-title { font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem; }
+.qr-sub { color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.5rem; }
+.btn-retry {
+  background: var(--bg-panel); border: 1px solid var(--border);
+  color: var(--text-secondary); font-weight: 600; font-size: 0.88rem;
+  padding: 0.7rem 1.5rem; border-radius: var(--radius);
+  transition: var(--transition); margin-right: 0.7rem;
+}
+.btn-retry:hover { border-color: var(--text-muted); color: var(--text-primary); }
+
+/* ═══════════════════════════════════════════
+   WALLET VIEW
+═══════════════════════════════════════════ */
+.wallet-hero {
+  background: linear-gradient(135deg, #0F1A08 0%, #0A1218 50%, #080E1A 100%);
+  border: 1px solid rgba(240,165,0,0.3);
+  border-radius: var(--radius-lg); padding: 2.5rem 2rem;
+  text-align: center; margin-bottom: 1.5rem;
+  position: relative; overflow: hidden;
+}
+.wallet-hero::before {
+  content: '🪙';
+  position: absolute;
+  top: -20px; right: -20px;
+  font-size: 10rem; opacity: 0.05;
+  transform: rotate(-15deg);
+  pointer-events: none;
+}
+.wh-points-label {
+  font-size: 0.8rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 2px;
+  color: var(--gold-dim); margin-bottom: 0.5rem;
+}
+.wh-points {
+  font-family: var(--font-display);
+  font-size: 5rem; font-weight: 800;
+  color: var(--gold); line-height: 1;
+  margin-bottom: 0.4rem;
+  text-shadow: 0 0 60px rgba(240,165,0,0.3);
+}
+.wh-points-sub { color: var(--text-muted); font-size: 0.82rem; }
+
+.wallet-notice {
+  background: rgba(240,165,0,0.06);
+  border: 1px solid rgba(240,165,0,0.2);
+  border-radius: var(--radius); padding: 1rem 1.2rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;
+}
+.wallet-notice strong { color: var(--gold); }
+
+.rewards-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.9rem; margin-bottom: 1.5rem;
+}
+.reward-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.2rem;
+}
+.rc-type { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.rc-pts {
+  font-family: var(--font-display); font-size: 1.6rem;
+  font-weight: 800; color: var(--gold); margin: 0.3rem 0;
+}
+.rc-name { font-size: 0.82rem; color: var(--text-secondary); }
+
+/* Earn history */
+.earn-history {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.eh-header {
+  padding: 1.2rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-display); font-size: 0.95rem;
+  font-weight: 700;
+}
+.eh-item {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.9rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  transition: var(--transition);
+}
+.eh-item:last-child { border-bottom: none; }
+.eh-item:hover { background: var(--bg-card-hover); }
+.eh-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+.eh-info { flex: 1; }
+.eh-desc { font-size: 0.85rem; color: var(--text-primary); }
+.eh-time { font-size: 0.72rem; color: var(--text-muted); }
+.eh-pts {
+  font-family: var(--font-mono); font-size: 0.9rem;
+  font-weight: 700; color: var(--green);
+}
+.eh-empty { padding: 2rem; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+
+/* ═══════════════════════════════════════════
+   PROGRESS VIEW
+═══════════════════════════════════════════ */
+.roadmap {
+  position: relative; padding-left: 2rem;
+}
+.roadmap::before {
+  content: '';
+  position: absolute; left: 10px; top: 16px; bottom: 16px;
+  width: 2px; background: linear-gradient(180deg, var(--gold), var(--teal), var(--purple));
+  border-radius: 10px;
+}
+.roadmap-step {
+  position: relative; margin-bottom: 1rem;
+}
+.rs-dot {
+  position: absolute; left: -2rem;
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg-base);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 700;
+  color: var(--text-muted); z-index: 1;
+  transition: var(--transition);
+}
+.rs-dot.done { background: var(--green); border-color: var(--green); color: #050A0F; }
+.rs-dot.active { background: var(--gold); border-color: var(--gold); color: #050A0F;
+  box-shadow: 0 0 16px var(--gold-glow); animation: dotPulse 1.5s ease infinite; }
+
+@keyframes dotPulse {
+  0%,100% { box-shadow: 0 0 10px var(--gold-glow); }
+  50% { box-shadow: 0 0 24px rgba(240,165,0,0.4); }
+}
+
+.rs-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.2rem 1.4rem;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: var(--transition);
+}
+.rs-card.done { border-color: rgba(34,217,138,0.25); }
+.rs-card.active { border-color: rgba(240,165,0,0.35); background: var(--gold-glow); }
+.rs-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.1rem; }
+.rs-title.done { text-decoration: line-through; color: var(--text-muted); }
+.rs-title.active { color: var(--gold); }
+.rs-lessons { font-size: 0.75rem; color: var(--text-muted); }
+.rs-status { font-size: 1.2rem; }
+
+/* Certificates section */
+.certs-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem; margin-top: 1.5rem;
+}
+.cert-card {
+  background: linear-gradient(135deg, #0F1A08, #0A1218);
+  border: 1px solid rgba(240,165,0,0.25);
+  border-radius: var(--radius-lg); padding: 1.8rem 1.5rem;
+  text-align: center; position: relative; overflow: hidden;
+}
+.cert-card.locked-cert {
+  background: var(--bg-card);
+  border-color: var(--border); opacity: 0.55;
+}
+.cert-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--gold), var(--teal));
+}
+.cert-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
+.cert-title { font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; margin-bottom: 0.3rem; }
+.cert-desc { font-size: 0.78rem; color: var(--text-secondary); }
+.cert-status {
+  display: inline-block; margin-top: 0.8rem;
+  font-size: 0.72rem; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px;
+}
+.cert-status.earned { background: rgba(34,217,138,0.15); color: var(--green); }
+.cert-status.pending { background: rgba(240,165,0,0.12); color: var(--gold); }
+
+/* ═══════════════════════════════════════════
+   COMPLETION VIEW
+═══════════════════════════════════════════ */
+.completion-view-inner {
+  max-width: 600px; margin: 4rem auto;
+  text-align: center;
+}
+.completion-stars {
+  font-size: 3rem; letter-spacing: 0.3rem;
+  margin-bottom: 1.5rem;
+  animation: starsPop 0.8s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes starsPop { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+.completion-title {
+  font-family: var(--font-display);
+  font-size: 2.5rem; font-weight: 800;
+  background: linear-gradient(135deg, var(--gold), var(--teal));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+.completion-sub { color: var(--text-secondary); font-size: 1rem; margin-bottom: 2rem; }
+.completion-card {
+  background: var(--bg-card); border: 1px solid rgba(240,165,0,0.3);
+  border-radius: var(--radius-lg); padding: 2rem; margin-bottom: 1.5rem;
+}
+.completion-points {
+  font-family: var(--font-display); font-size: 3.5rem;
+  font-weight: 800; color: var(--gold);
+  text-shadow: 0 0 40px var(--gold-glow);
+}
+.completion-pts-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem; }
+.nft-unlock {
+  background: linear-gradient(135deg, rgba(155,109,255,0.08), rgba(0,207,207,0.08));
+  border: 1px solid rgba(155,109,255,0.3);
+  border-radius: var(--radius-lg); padding: 1.5rem;
+  margin-top: 1rem;
+}
+.nft-unlock h4 { font-family: var(--font-display); font-weight: 700; margin-bottom: 0.4rem; color: var(--purple); }
+.nft-unlock p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+
+/* ═══════════════════════════════════════════
+   BETA TESTERS
+═══════════════════════════════════════════ */
+.beta-banner {
+  background: linear-gradient(135deg, rgba(155,109,255,0.1), rgba(0,207,207,0.08));
+  border: 1px solid rgba(155,109,255,0.3);
+  border-radius: var(--radius-lg); padding: 1.8rem;
+  margin-bottom: 1.5rem;
+}
+.beta-tag {
+  display: inline-block;
+  background: var(--purple); color: #fff;
+  font-size: 0.7rem; font-weight: 800;
+  padding: 2px 10px; border-radius: 20px;
+  letter-spacing: 1px; margin-bottom: 0.8rem;
+}
+.beta-banner h3 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; margin-bottom: 0.6rem; }
+.beta-banner p { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; }
+.beta-rewards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.8rem; margin-top: 1.2rem;
+}
+.beta-reward-item {
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.9rem;
+  display: flex; align-items: flex-start; gap: 0.6rem;
+}
+.beta-reward-item .br-icon { font-size: 1.3rem; flex-shrink: 0; }
+.br-title { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); }
+.br-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
+
+/* ═══════════════════════════════════════════
+   UTILITY
+═══════════════════════════════════════════ */
+.section-title {
+  font-family: var(--font-display); font-size: 1rem;
+  font-weight: 700; margin-bottom: 1rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  color: var(--text-primary);
+}
+.section-title::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--border), transparent);
+  margin-left: 0.5rem;
+}
+.chip {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.chip-gold { background: rgba(240,165,0,0.12); color: var(--gold); }
+.chip-teal { background: rgba(0,207,207,0.12); color: var(--teal); }
+.chip-green { background: rgba(34,217,138,0.12); color: var(--green); }
+.chip-purple { background: rgba(155,109,255,0.12); color: var(--purple); }
+
+.spinner {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--gold);
+  animation: spin 0.7s linear infinite;
+  margin: 2rem auto; display: block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  #sidebar { transform: translateX(-100%); }
+  #sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .hamburger { display: flex; }
+  #main-content { margin-left: 0; padding: 1rem 1rem 1rem; padding-top: 4rem; }
+  .modules-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .lesson-layout { grid-template-columns: 1fr; }
+  .rewards-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ── LOADING ──────────────────────────────── -->
+<div id="loading-screen">
+  <div class="loader-logo">GATA</div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted)">
+    Initializing Web3 Onboarding System...
+  </div>
+</div>
+
+<!-- ── POINTS TOAST ───────────────────────── -->
+<div class="points-toast" id="points-toast">
+  <div class="pt-icon">🪙</div>
+  <div>
+    <div class="pt-main" id="toast-pts">+50 GATA Points</div>
+    <div class="pt-sub" id="toast-msg">Lesson completed!</div>
+  </div>
+</div>
+
+<!-- ── AUTH VIEW ──────────────────────────── -->
+<div id="auth-view">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="brand-mark">G</div>
+      <h1>GATA Web3 Onboarding</h1>
+      <p>1Billion2Web3 — Learn. Earn. Build.</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</button>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+    <div id="login-form">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="login-email" placeholder="your@email.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" />
+      </div>
+      <button class="btn-primary" onclick="loginWithEmail()" id="btn-login">Sign In</button>
+    </div>
+    <div id="register-form" style="display:none">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Your full name" />
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="reg-email" placeholder="your@email.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Min 6 characters" />
+      </div>
+      <button class="btn-primary" onclick="registerWithEmail()" id="btn-register">Create Account</button>
+    </div>
+    <div class="auth-divider">or</div>
+    <button class="btn-google" onclick="loginWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.1 8 3l5.7-5.7C34.5 6.5 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.9 1.1 8 3l5.7-5.7C34.5 6.5 29.5 4 24 4c-7.7 0-14.4 4.4-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.4 35.5 26.8 36 24 36c-5.2 0-9.6-3-11.4-7.4l-6.5 5C9.5 39.5 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.9 2.6-2.6 4.8-4.9 6.3l6.2 5.2C42.4 36 44 30.4 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+      Continue with Google
+    </button>
+  </div>
+</div>
+
+<!-- ── APP SHELL ─────────────────────────── -->
+<div id="app-shell">
+
+  <!-- Mobile hamburger -->
+  <button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-inner">
+        <div class="brand-icon">G</div>
+        <div class="brand-text">
+          <div class="brand-name">GATA Protocol</div>
+          <div class="brand-sub">WEB3 ONBOARDING</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-wallet" onclick="navigateTo('wallet')">
+      <div class="sw-label">🪙 GATA Points</div>
+      <div class="sw-points" id="sidebar-points">0</div>
+      <div class="sw-sub">Tap to view wallet</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <div class="nav-item active" id="nav-dashboard" onclick="navigateTo('dashboard')">
+        <span class="nav-icon">⊞</span> Dashboard
+      </div>
+      <div class="nav-item" id="nav-modules" onclick="navigateTo('modules')">
+        <span class="nav-icon">📚</span> Modules
+      </div>
+      <div class="nav-item" id="nav-progress" onclick="navigateTo('progress')">
+        <span class="nav-icon">🗺</span> My Progress
+      </div>
+      <div class="nav-item" id="nav-wallet" onclick="navigateTo('wallet')">
+        <span class="nav-icon">🪙</span> Wallet
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Resources</div>
+      <div class="nav-item" onclick="window.open('https://discord.gg/gata','_blank')">
+        <span class="nav-icon">💬</span> Discord Community
+      </div>
+      <div class="nav-item" onclick="window.open('https://gataprotocol.io','_blank')">
+        <span class="nav-icon">🌐</span> GATA Protocol
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="user-display-name">Loading...</div>
+          <div class="user-email" id="user-display-email">—</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">← Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main id="main-content">
+
+    <!-- DASHBOARD VIEW -->
+    <div class="view active" id="view-dashboard">
+      <div class="page-header">
+        <div class="breadcrumb">Home</div>
+        <h2>Dashboard</h2>
+        <p>Welcome back to your Web3 learning journey.</p>
+      </div>
+
+      <div class="welcome-banner" id="welcome-banner">
+        <h3 id="welcome-text">Welcome to GATA Web3 Onboarding 👋</h3>
+        <p>Complete all 12 modules to earn your <strong>1Billion2Web3 NFT Certificate</strong> and become eligible for Beta Tester Rewards.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card stat-gold">
+          <div class="stat-label">GATA Points</div>
+          <div class="stat-value" id="dash-points">0</div>
+          <div class="stat-sub">Learning wallet</div>
+        </div>
+        <div class="stat-card stat-teal">
+          <div class="stat-label">Modules Done</div>
+          <div class="stat-value" id="dash-modules">0/12</div>
+          <div class="stat-sub">Complete all 12</div>
+        </div>
+        <div class="stat-card stat-green">
+          <div class="stat-label">Lessons Done</div>
+          <div class="stat-value" id="dash-lessons">0</div>
+          <div class="stat-sub">Keep going!</div>
+        </div>
+        <div class="stat-card stat-purple">
+          <div class="stat-label">Certificates</div>
+          <div class="stat-value" id="dash-certs">0</div>
+          <div class="stat-sub">Eligible at 100%</div>
+        </div>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-header">
+          <span class="progress-label">Overall Onboarding Progress</span>
+          <span class="progress-pct" id="overall-pct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="overall-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="section-title">Continue Learning</div>
+      <div class="modules-grid" id="dashboard-modules-grid">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <!-- MODULES VIEW -->
+    <div class="view" id="view-modules">
+      <div class="page-header">
+        <div class="breadcrumb">Modules</div>
+        <h2>All Modules</h2>
+        <p>12 modules covering everything from Web3 basics to building your storefront.</p>
+      </div>
+      <div class="modules-grid" id="all-modules-grid">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <!-- MODULE DETAIL VIEW -->
+    <div class="view" id="view-module-detail">
+      <button class="back-btn" onclick="navigateTo('modules')">← Back to Modules</button>
+      <div id="module-detail-content">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <!-- LESSON VIEW -->
+    <div class="view" id="view-lesson">
+      <button class="back-btn" id="lesson-back-btn">← Back to Module</button>
+      <div class="page-header">
+        <div class="breadcrumb" id="lesson-breadcrumb">Module 1 › Lesson</div>
+        <h2 id="lesson-title">Loading...</h2>
+      </div>
+      <div class="lesson-layout">
+        <div>
+          <div class="video-container" id="video-container">
+            <div class="video-placeholder" id="video-placeholder">
+              <div class="vp-icon">▶️</div>
+              <div class="vp-text">Lesson video will load here<br><small>Connect IPFS/video URL to enable</small></div>
+              <div class="vp-url" id="video-url-display">ipfs://...</div>
+            </div>
+          </div>
+          <div class="lesson-controls">
+            <div class="lc-time-saved" id="saved-time-display">▸ Progress auto-saved</div>
+            <div style="display:flex;gap:0.6rem;align-items:center">
+              <button class="btn-complete" id="btn-complete-lesson" onclick="completeCurrentLesson()">
+                ✓ Mark Complete &amp; Earn Points
+              </button>
+            </div>
+          </div>
+          <div class="lesson-content-card" style="margin-top:1rem">
+            <h3>📖 Lesson Summary</h3>
+            <div class="lesson-summary" id="lesson-summary-content">Loading...</div>
+          </div>
+        </div>
+        <div class="lesson-sidebar">
+          <div class="ls-card">
+            <h4>📑 Module Lessons</h4>
+            <div id="lesson-nav-list"></div>
+          </div>
+          <div class="ls-card" id="lesson-reward-card">
+            <h4>🎯 Rewards</h4>
+            <div id="lesson-reward-info"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUIZ VIEW -->
+    <div class="view" id="view-quiz">
+      <button class="back-btn" id="quiz-back-btn">← Back to Module</button>
+      <div class="quiz-container">
+        <div class="quiz-header">
+          <div class="quiz-icon">🧠</div>
+          <h2>1Billion2Web3 Knowledge Test</h2>
+          <p>Answer all 5 questions correctly to earn your certificate eligibility &amp; +200 GATA Points</p>
+        </div>
+        <div class="quiz-progress-bar">
+          <div class="quiz-progress-fill" id="quiz-progress-fill" style="width:0%"></div>
+        </div>
+        <div id="quiz-question-container"></div>
+        <div class="quiz-actions">
+          <span class="q-counter" id="q-counter">Question 1 of 5</span>
+          <button class="btn-quiz-next" id="btn-quiz-next" disabled onclick="nextQuestion()">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- WALLET VIEW -->
+    <div class="view" id="view-wallet">
+      <div class="page-header">
+        <div class="breadcrumb">Wallet</div>
+        <h2>GATA Points Wallet</h2>
+        <p>Your learning rewards accumulate here.</p>
+      </div>
+      <div class="wallet-hero">
+        <div class="wh-points-label">Total GATA Points</div>
+        <div class="wh-points" id="wallet-points-display">0</div>
+        <div class="wh-points-sub">Learning Reward Points</div>
+      </div>
+      <div class="wallet-notice">
+        <strong>⚠️ Important:</strong> GATA Points are <strong>not</strong> the same as GATA Tokens.
+        They are learning reward points earned by completing onboarding lessons.
+        In the future, these points <strong>may be redeemable</strong> for GATA Token or ecosystem rewards.
+      </div>
+      <div class="section-title">Points Structure</div>
+      <div class="rewards-grid">
+        <div class="reward-card"><div class="rc-type">Per Lesson</div><div class="rc-pts">+50</div><div class="rc-name">Lesson completion</div></div>
+        <div class="reward-card"><div class="rc-type">Per Module</div><div class="rc-pts">+150</div><div class="rc-name">Full module bonus</div></div>
+        <div class="reward-card"><div class="rc-type">Quiz Pass</div><div class="rc-pts">+100</div><div class="rc-name">Quiz completion</div></div>
+        <div class="reward-card"><div class="rc-type">Full Onboarding</div><div class="rc-pts">+1000</div><div class="rc-name">Complete all modules</div></div>
+      </div>
+      <div class="section-title" style="margin-top:1.5rem">Earn History</div>
+      <div class="earn-history" id="earn-history">
+        <div class="eh-header">Recent Activity</div>
+        <div id="earn-history-list"><div class="eh-empty">No earnings yet. Start a lesson!</div></div>
+      </div>
+    </div>
+
+    <!-- PROGRESS VIEW -->
+    <div class="view" id="view-progress">
+      <div class="page-header">
+        <div class="breadcrumb">Progress</div>
+        <h2>My Learning Roadmap</h2>
+        <p>Track your journey from Web3 beginner to GATA ecosystem participant.</p>
+      </div>
+
+      <div class="beta-banner">
+        <div class="beta-tag">BETA TESTERS</div>
+        <h3>Early Adopter Rewards Available</h3>
+        <p>Complete onboarding during the beta phase and qualify for exclusive ecosystem rewards. Join the Discord beta channel and follow testing announcements.</p>
+        <div class="beta-rewards">
+          <div class="beta-reward-item">
+            <div class="br-icon">🏆</div>
+            <div><div class="br-title">1Billion2Web3 NFT Certificate</div><div class="br-desc">For all who complete onboarding</div></div>
+          </div>
+          <div class="beta-reward-item">
+            <div class="br-icon">🎫</div>
+            <div><div class="br-title">Free GATA Pass NFT</div><div class="br-desc">First 100 qualified participants</div></div>
+          </div>
+          <div class="beta-reward-item">
+            <div class="br-icon">💎</div>
+            <div><div class="br-title">600,000 $GATA Tokens</div><div class="br-desc">Share in the rewards pool</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Onboarding Roadmap</div>
+      <div class="roadmap" id="progress-roadmap">
+        <div class="spinner"></div>
+      </div>
+
+      <div class="section-title" style="margin-top:2rem">Certificates &amp; NFTs</div>
+      <div class="certs-grid">
+        <div class="cert-card" id="cert-1b2w3">
+          <div class="cert-icon">🎓</div>
+          <div class="cert-title">1Billion2Web3 Certificate</div>
+          <div class="cert-desc">Awarded upon completing all 12 modules and passing the knowledge test</div>
+          <div class="cert-status pending" id="cert-1b2w3-status">Complete Module 5 Quiz</div>
+        </div>
+        <div class="cert-card" id="cert-gata-pass">
+          <div class="cert-icon">🎫</div>
+          <div class="cert-title">GATA Pass Membership NFT</div>
+          <div class="cert-desc">Access to GATA ecosystem marketplace, seller profiles, and platform tools</div>
+          <div class="cert-status pending" id="cert-gata-pass-status">Complete Onboarding</div>
+        </div>
+        <div class="cert-card locked-cert" id="cert-beta">
+          <div class="cert-icon">⭐</div>
+          <div class="cert-title">Beta Tester Reward</div>
+          <div class="cert-desc">First 100 qualified beta participants. Join Discord to qualify.</div>
+          <div class="cert-status pending">Join Discord Channel</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLETION VIEW -->
+    <div class="view" id="view-completion">
+      <div class="completion-view-inner">
+        <div class="completion-stars">🌟✨🏆✨🌟</div>
+        <div class="completion-title">Congratulations!</div>
+        <div class="completion-sub">You've completed the <strong>1Billion2Web3</strong> onboarding program</div>
+        <div class="completion-card">
+          <div class="completion-points" id="completion-points-display">0</div>
+          <div class="completion-pts-label">Total GATA Points Earned</div>
+          <div class="nft-unlock" style="margin-top:1.5rem">
+            <h4>🎫 NFT Eligibility Unlocked</h4>
+            <p>You are now eligible to receive your <strong>1Billion2Web3 NFT Certificate</strong> and <strong>GATA Pass Membership NFT</strong>.
+            The smart contract minting process will be triggered for qualified participants.</p>
+          </div>
+        </div>
+        <button class="btn-primary" style="width:auto;padding:0.8rem 2rem" onclick="navigateTo('progress')">View Progress &amp; Certificates →</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════════ -->
+<script>
+/* ═══════════════════════════════════════════
+   🔥 FIREBASE CONFIG — Replace with your own
+═══════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCdiwp79_4Ui0jszBmtQFknvNX_uYSg9IA",
+  authDomain: "gata-web3-business-onboarding.firebaseapp.com",
+  projectId: "gata-web3-business-onboarding",
+  storageBucket: "gata-web3-business-onboarding.firebasestorage.app",
+  messagingSenderId: "595150614740",
+  appId: "1:595150614740:web:b728f4d17b247116af4b41"
+};
+
+let app, auth, db;
+let isFirebaseReady = false;
+
+try {
+  app  = firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db   = firebase.firestore();
+  isFirebaseReady = true;
+} catch(e) {
+  console.warn("Firebase not configured. Running in demo mode.", e);
+}
+
+/* ═══════════════════════════════════════════
+   DEMO MODE (when Firebase not configured)
+   Stores state in memory + localStorage
+═══════════════════════════════════════════ */
+const demoUser = { uid: 'demo-user', email: 'demo@gata.io', displayName: 'Demo User' };
+let demoMode   = !isFirebaseReady;
+
+function getDemoState() {
+  try {
+    return JSON.parse(localStorage.getItem('gata_demo_state') || '{"points":0,"completedLessons":[],"completedModules":[],"history":[],"quizPassed":false}');
+  } catch { return {points:0,completedLessons:[],completedModules:[],history:[],quizPassed:false}; }
+}
+function saveDemoState(s) {
+  try { localStorage.setItem('gata_demo_state', JSON.stringify(s)); } catch {}
+}
+
+/* ═══════════════════════════════════════════
+   APP STATE
+═══════════════════════════════════════════ */
+const state = {
+  user:              null,
+  points:            0,
+  completedLessons:  new Set(),
+  completedModules:  new Set(),
+  earnHistory:       [],
+  quizPassed:        false,
+  currentModuleId:   null,
+  currentLessonId:   null,
+  currentView:       'dashboard',
+  quizState: { current: 0, answers: [], answered: false }
+};
+
+/* ═══════════════════════════════════════════
+   CURRICULUM DATA
+═══════════════════════════════════════════ */
+const MODULES = [
+  {
+    id: 'module1', order: 1,
+    title: 'Welcome to GATA',
+    description: 'Discover the GATA Protocol and how it empowers you to build a digital business with lower fees and higher earnings.',
+    points: 50, icon: '🌐',
+    lessons: [
+      {
+        id: 'module1_lesson1', order: 1,
+        title: 'Build Your Digital Store',
+        subtitle: 'Introduction to GATA Protocol',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>This lesson introduces the transformative opportunity within the <strong>GATA Protocol</strong>.</p>
+        <p>You will learn that the ecosystem allows you to:</p>
+        <ul>
+          <li><strong>Build a digital business</strong> that operates globally from day one</li>
+          <li><strong>Sell products or services</strong> to a growing decentralized marketplace</li>
+          <li><strong>Pay lower platform fees</strong> compared to traditional e-commerce</li>
+          <li><strong>Keep more profit</strong> from every transaction you make</li>
+          <li><strong>Earn incentives</strong> for actively participating in the ecosystem</li>
+        </ul>
+        <p>At the end of onboarding, you will be able to create a storefront, list products or services, and start earning through digital commerce.</p>`
+      }
+    ]
+  },
+  {
+    id: 'module2', order: 2,
+    title: 'Understanding the GATA Ecosystem',
+    description: 'Learn how the decentralized marketplace connects sellers, buyers, and logistics providers — with everyone keeping more value.',
+    points: 100, icon: '⬡',
+    lessons: [
+      {
+        id: 'module2_lesson1', order: 1,
+        title: 'What is GATA Protocol',
+        subtitle: 'Decentralized marketplace overview',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>This lesson explains how the <strong>GATA ecosystem</strong> works as a decentralized marketplace connecting:</p>
+        <ul>
+          <li><strong>Sellers</strong> — vendors who list products and services</li>
+          <li><strong>Buyers</strong> — customers who purchase across the platform</li>
+          <li><strong>Logistics providers</strong> — delivery partners who fulfill orders</li>
+        </ul>
+        <p>The platform reduces costs and allows all participants to <strong>keep more value</strong> from their transactions, unlike centralized platforms that take large commissions.</p>`
+      },
+      {
+        id: 'module2_lesson2', order: 2,
+        title: 'Community Marketplace',
+        subtitle: 'How the network grows together',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>The GATA Community Marketplace enables:</p>
+        <ul>
+          <li><strong>Product sales</strong> — list physical and digital goods</li>
+          <li><strong>Service listings</strong> — offer professional services</li>
+          <li><strong>Delivery coordination</strong> — integrated logistics network</li>
+        </ul>
+        <p>Every participant contributes to the growth of the network. The more participants, the more value the entire ecosystem creates for everyone involved.</p>`
+      }
+    ]
+  },
+  {
+    id: 'module3', order: 3,
+    title: 'Create Your Wallet',
+    description: 'A digital wallet is your gateway to Web3. Learn to set one up, keep it secure, and connect it to GATA.',
+    points: 100, icon: '👛',
+    lessons: [
+      {
+        id: 'module3_lesson1', order: 1,
+        title: 'What is a Wallet',
+        subtitle: 'Digital identity and asset storage',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>A <strong>digital wallet</strong> is a software account that allows you to store digital assets and interact with Web3 platforms.</p>
+        <p>Your wallet is used to:</p>
+        <ul>
+          <li><strong>Store tokens</strong> including GATA Token and other crypto assets</li>
+          <li><strong>Store NFTs</strong> such as your GATA Pass and certificates</li>
+          <li><strong>Approve transactions</strong> when buying, selling, or interacting with smart contracts</li>
+        </ul>
+        <p>Popular wallet examples: <strong>MetaMask</strong> (browser extension) and <strong>Trust Wallet</strong> (mobile app).</p>`
+      },
+      {
+        id: 'module3_lesson2', order: 2,
+        title: 'Wallet Setup Guide',
+        subtitle: 'Install, secure, and connect',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>Follow these steps to set up your wallet:</p>
+        <ul>
+          <li><strong>Install</strong> a wallet — download MetaMask from metamask.io or Trust Wallet from the app store</li>
+          <li><strong>Create</strong> your wallet account following the guided setup</li>
+          <li><strong>Safely store</strong> your recovery phrase (seed phrase) — write it down and keep it offline</li>
+          <li><strong>Never share</strong> your seed phrase with anyone, ever</li>
+          <li><strong>Connect</strong> your wallet to GATA Protocol applications when prompted</li>
+        </ul>
+        <p>⚠️ Your seed phrase is the master key to your wallet. Losing it means losing access. Store it safely.</p>`
+      }
+    ]
+  },
+  {
+    id: 'module4', order: 4,
+    title: 'Web3 Basics',
+    description: 'Understand the decentralized internet: what Web3 is, how tokens work, and what NFTs represent.',
+    points: 150, icon: '🕸',
+    lessons: [
+      {
+        id: 'module4_lesson1', order: 1,
+        title: 'What is Web3',
+        subtitle: 'The decentralized internet era',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p><strong>Web3</strong> represents a fundamental shift in how the internet works:</p>
+        <ul>
+          <li><strong>Web1</strong> — Read-only internet (static websites)</li>
+          <li><strong>Web2</strong> — Read-write internet (social media, apps) — but companies own your data</li>
+          <li><strong>Web3</strong> — Read-write-own internet — <em>you</em> own your digital assets and control your data</li>
+        </ul>
+        <p>In Web3, users interact through decentralized applications (dApps) and wallets, rather than through accounts controlled by corporations.</p>`
+      },
+      {
+        id: 'module4_lesson2', order: 2,
+        title: 'What are Tokens',
+        subtitle: 'Digital value and utility',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p><strong>Tokens</strong> represent value in blockchain ecosystems. They can serve multiple purposes:</p>
+        <ul>
+          <li><strong>Payments</strong> — used to pay for goods, services, and transaction fees</li>
+          <li><strong>Governance</strong> — token holders vote on protocol decisions</li>
+          <li><strong>Rewards</strong> — earned by participating in ecosystem activities</li>
+          <li><strong>Utility</strong> — unlock features and access within a platform</li>
+        </ul>
+        <p>The <strong>GATA Token</strong> serves all these functions within the GATA Protocol ecosystem.</p>`
+      },
+      {
+        id: 'module4_lesson3', order: 3,
+        title: 'What are NFTs',
+        subtitle: 'Unique digital ownership',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p><strong>NFTs (Non-Fungible Tokens)</strong> represent unique digital ownership on the blockchain.</p>
+        <p>Unlike regular tokens (which are identical), each NFT is one-of-a-kind. They can represent:</p>
+        <ul>
+          <li><strong>Certificates</strong> — like the 1Billion2Web3 completion certificate</li>
+          <li><strong>Membership access</strong> — like the GATA Pass NFT granting ecosystem access</li>
+          <li><strong>Digital assets</strong> — artwork, collectibles, in-game items</li>
+          <li><strong>Proof of achievement</strong> — verifiable credentials on-chain</li>
+        </ul>`
+      }
+    ]
+  },
+  {
+    id: 'module5', order: 5,
+    title: '1Billion2Web3 Orientation',
+    description: 'Deep dive into blockchain fundamentals, digital transactions, and complete the knowledge quiz to earn your certificate eligibility.',
+    points: 200, icon: '🎓', hasQuiz: true,
+    lessons: [
+      {
+        id: 'module5_lesson1', order: 1,
+        title: 'Blockchain Basics',
+        subtitle: 'How distributed ledgers work',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p><strong>Blockchain</strong> is a distributed ledger technology that records transactions in a transparent and tamper-proof way.</p>
+        <p>Key properties of blockchain:</p>
+        <ul>
+          <li><strong>Decentralized</strong> — no single entity controls it</li>
+          <li><strong>Transparent</strong> — all transactions are visible on-chain</li>
+          <li><strong>Immutable</strong> — once recorded, data cannot be changed</li>
+          <li><strong>Secure</strong> — cryptographic proofs protect every entry</li>
+        </ul>
+        <p>Every transaction on GATA Protocol is recorded on blockchain, ensuring trust between all participants without needing a central authority.</p>`
+      },
+      {
+        id: 'module5_lesson2', order: 2,
+        title: 'Transactions',
+        subtitle: 'Sending tokens and smart contracts',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>A <strong>digital transaction</strong> on blockchain is fundamentally different from a bank transfer:</p>
+        <ul>
+          <li><strong>Peer-to-peer</strong> — sent directly between wallets, no intermediary</li>
+          <li><strong>Gas fees</strong> — small fees paid to the network for processing</li>
+          <li><strong>Smart contracts</strong> — self-executing code that automates conditions (e.g., release payment only after delivery confirmation)</li>
+          <li><strong>Finality</strong> — once confirmed, transactions cannot be reversed</li>
+        </ul>
+        <p>Always double-check wallet addresses before sending. Blockchain transactions are irreversible.</p>`
+      },
+      {
+        id: 'module5_quiz', order: 3,
+        title: 'Knowledge Test',
+        subtitle: 'Quiz — Required for certificate',
+        isQuiz: true,
+        videoUrl: '',
+        summary: `<p>Complete the <strong>1Billion2Web3 Knowledge Test</strong> to demonstrate your understanding of Web3 fundamentals.</p>
+        <p>Upon passing (80% or higher):</p>
+        <ul>
+          <li>You become eligible for the <strong>1Billion2Web3 NFT Certificate</strong></li>
+          <li>Earn <strong>+200 GATA Points</strong></li>
+        </ul>`
+      }
+    ]
+  },
+  {
+    id: 'module6', order: 6,
+    title: 'Membership NFT',
+    description: 'Understand the GATA Pass Membership NFT — your key to the marketplace, seller profiles, and platform tools.',
+    points: 150, icon: '🎫',
+    lessons: [
+      {
+        id: 'module6_lesson1', order: 1,
+        title: 'GATA Pass NFT',
+        subtitle: 'Your ecosystem access key',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>The <strong>GATA Pass Membership NFT</strong> is more than a collectible — it is your access key to the ecosystem.</p>
+        <p>With a GATA Pass NFT, you can:</p>
+        <ul>
+          <li><strong>Participate in the marketplace</strong> — list and sell products or services</li>
+          <li><strong>Create seller profiles</strong> — establish your digital business presence</li>
+          <li><strong>Access platform tools</strong> — analytics, messaging, order management</li>
+          <li><strong>Receive ecosystem rewards</strong> — earn incentives for platform activity</li>
+        </ul>
+        <p>Beta testers who complete onboarding qualify for a <strong>free GATA Pass NFT</strong> (first 100 participants).</p>`
+      }
+    ]
+  },
+  {
+    id: 'module7', order: 7,
+    title: 'GATA Token',
+    description: 'Learn about the GATA ecosystem token — how to use it for payments, receiving incentives, and platform interaction.',
+    points: 100, icon: '🪙',
+    lessons: [
+      {
+        id: 'module7_lesson1', order: 1,
+        title: 'GATA Token Overview',
+        subtitle: 'The ecosystem currency',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>The <strong>GATA Token ($GATA)</strong> is the native token of the GATA Protocol ecosystem.</p>
+        <p>It can be used to:</p>
+        <ul>
+          <li><strong>Pay transaction fees</strong> — reduced fees when using $GATA</li>
+          <li><strong>Receive incentives</strong> — earn $GATA by participating in the ecosystem</li>
+          <li><strong>Interact with the platform</strong> — governance votes, staking, rewards</li>
+          <li><strong>Trade value</strong> — exchangeable on supported cryptocurrency exchanges</li>
+        </ul>
+        <p>Beta testers who complete onboarding share in a pool of <strong>600,000 $GATA tokens</strong> in rewards.</p>`
+      }
+    ]
+  },
+  {
+    id: 'module8', order: 8,
+    title: 'Cash In and Cash Out',
+    description: 'How to convert between fiat and crypto — especially important for Nigerian participants using local payment rails.',
+    points: 100, icon: '💱',
+    lessons: [
+      {
+        id: 'module8_lesson1', order: 1,
+        title: 'Fiat to Crypto & Back',
+        subtitle: 'Especially important for Nigeria',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>Understanding how to <strong>cash in and cash out</strong> is essential for real-world participation.</p>
+        <p><strong>Cash In (Fiat → Crypto):</strong></p>
+        <ul>
+          <li>Naira (NGN) → Exchange (e.g., Binance P2P, Bybit, local P2P) → USDT/BNB → GATA Token</li>
+        </ul>
+        <p><strong>Cash Out (Crypto → Fiat):</strong></p>
+        <ul>
+          <li>GATA Token → USDT/BNB → Exchange → Naira (NGN) → Bank account</li>
+        </ul>
+        <p>Recommended platforms for Nigerian users: <strong>Binance P2P</strong>, <strong>Bybit P2P</strong>, <strong>Yellow Card</strong>, and local crypto exchanges.</p>
+        <p>Always verify exchange rates and fees before converting.</p>`
+      }
+    ]
+  },
+  {
+    id: 'module9', order: 9,
+    title: 'Create Your Storefront',
+    description: 'Build your digital business presence — a vendor shop or logistics service profile on the GATA marketplace.',
+    points: 200, icon: '🏪',
+    lessons: [
+      {
+        id: 'module9_lesson1', order: 1,
+        title: 'Build Your Profile',
+        subtitle: 'Identity and business details',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>Your <strong>GATA Profile</strong> is your digital identity within the ecosystem. It includes:</p>
+        <ul>
+          <li>Your name and business name</li>
+          <li>Profile photo and description</li>
+          <li>Contact information and location</li>
+          <li>Wallet address for receiving payments</li>
+        </ul>
+        <p>A complete profile builds trust with buyers and increases your visibility in the marketplace.</p>`
+      },
+      {
+        id: 'module9_lesson2', order: 2,
+        title: 'Set Up Your Storefront',
+        subtitle: 'For vendors and logistics providers',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>Your <strong>storefront</strong> is how buyers find and interact with your business:</p>
+        <ul>
+          <li><strong>For vendors:</strong> An online shop where customers browse and purchase your products</li>
+          <li><strong>For logistics providers:</strong> A delivery service profile listing coverage areas, rates, and capabilities</li>
+        </ul>
+        <p>Customize your storefront with your business branding, policies, and service descriptions.</p>`
+      },
+      {
+        id: 'module9_lesson3', order: 3,
+        title: 'Storefront Branding',
+        subtitle: 'Stand out in the marketplace',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>Strong <strong>branding</strong> differentiates your business and attracts more customers:</p>
+        <ul>
+          <li><strong>Logo and banner</strong> — visual identity for your store</li>
+          <li><strong>Color scheme</strong> — consistent visual language</li>
+          <li><strong>Business description</strong> — clear, compelling copy about what you offer</li>
+          <li><strong>Social proof</strong> — early reviews and transaction history build credibility</li>
+        </ul>`
+      }
+    ]
+  },
+  {
+    id: 'module10', order: 10,
+    title: 'List Products or Services',
+    description: 'Learn how to publish listings that attract customers — from adding products to setting the right pricing.',
+    points: 200, icon: '📦',
+    lessons: [
+      {
+        id: 'module10_lesson1', order: 1,
+        title: 'Add Product or Service',
+        subtitle: 'Creating your first listing',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>A well-crafted listing is the foundation of successful selling:</p>
+        <ul>
+          <li><strong>Title</strong> — clear, descriptive, searchable name</li>
+          <li><strong>Description</strong> — detailed explanation of what you're offering</li>
+          <li><strong>Photos or media</strong> — high-quality visuals dramatically increase conversions</li>
+          <li><strong>Category</strong> — proper categorization helps buyers find you</li>
+          <li><strong>Inventory/availability</strong> — keep stock levels accurate</li>
+        </ul>`
+      },
+      {
+        id: 'module10_lesson2', order: 2,
+        title: 'Set Your Pricing',
+        subtitle: 'Competitive pricing strategy',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>Smart <strong>pricing</strong> balances competitiveness with profitability:</p>
+        <ul>
+          <li>Research competitor pricing in your category</li>
+          <li>Factor in GATA platform fees (lower than traditional platforms)</li>
+          <li>Consider offering introductory discounts to attract first buyers</li>
+          <li>Use GATA Token pricing for fee benefits</li>
+          <li>Clearly display prices in both local currency and crypto equivalents</li>
+        </ul>`
+      },
+      {
+        id: 'module10_lesson3', order: 3,
+        title: 'Publish Your Listing',
+        subtitle: 'Go live on the marketplace',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>Before publishing your listing, check:</p>
+        <ul>
+          <li>✅ All required fields are completed</li>
+          <li>✅ Photos are clear and representative</li>
+          <li>✅ Pricing is correct and competitive</li>
+          <li>✅ Your wallet is connected to receive payments</li>
+          <li>✅ Shipping/delivery details are specified</li>
+        </ul>
+        <p>Well-presented listings attract more customers and generate more sales. Quality matters.</p>`
+      }
+    ]
+  },
+  {
+    id: 'module11', order: 11,
+    title: 'Start Selling',
+    description: 'Understand how the full transaction flow works — from buyer to seller to logistics and delivery.',
+    points: 200, icon: '💸',
+    lessons: [
+      {
+        id: 'module11_lesson1', order: 1,
+        title: 'Marketplace Transaction Flow',
+        subtitle: 'Buyer → Seller → Logistics → Delivery',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>The <strong>GATA marketplace flow</strong> is designed to be seamless and trust-minimized:</p>
+        <ol style="padding-left:1.2rem">
+          <li style="margin-bottom:0.4rem"><strong>Buyer</strong> browses marketplace and places order</li>
+          <li style="margin-bottom:0.4rem"><strong>Payment</strong> is locked in escrow smart contract</li>
+          <li style="margin-bottom:0.4rem"><strong>Seller</strong> receives order notification and prepares item</li>
+          <li style="margin-bottom:0.4rem"><strong>Logistics provider</strong> picks up and delivers</li>
+          <li style="margin-bottom:0.4rem"><strong>Buyer confirms</strong> receipt — funds released to seller</li>
+          <li><strong>Delivery fee</strong> automatically sent to logistics provider</li>
+        </ol>
+        <p>Sellers earn revenue on every completed transaction. Logistics providers earn delivery fees automatically.</p>`
+      }
+    ]
+  },
+  {
+    id: 'module12', order: 12,
+    title: 'Beta Tester Rewards',
+    description: 'You made it! Learn how to qualify for exclusive beta rewards including free NFTs and $GATA token distribution.',
+    points: 300, icon: '⭐',
+    lessons: [
+      {
+        id: 'module12_lesson1', order: 1,
+        title: 'How to Qualify as Beta Tester',
+        subtitle: 'Exclusive rewards for early participants',
+        videoUrl: 'ipfs://YOUR_LESSON_VIDEO_CID',
+        summary: `<p>As an <strong>early participant</strong> in the GATA Protocol beta, you qualify for exclusive rewards.</p>
+        <p>To qualify as a Beta Tester:</p>
+        <ul>
+          <li>✅ Complete all 12 onboarding modules</li>
+          <li>✅ Join the <strong>Discord beta testers channel</strong></li>
+          <li>✅ Follow testing announcements and participate in product testing</li>
+          <li>✅ Provide feedback to improve the ecosystem</li>
+        </ul>
+        <p><strong>Beta Tester Rewards:</strong></p>
+        <ul>
+          <li>🎓 <strong>1Billion2Web3 NFT Certificate</strong> — for all who complete onboarding</li>
+          <li>🎫 <strong>Free GATA Pass Membership NFT</strong> — first 100 qualified participants</li>
+          <li>💎 <strong>Share of 600,000 $GATA Token rewards</strong> — distributed to qualified testers</li>
+        </ul>
+        <p>Join now: <strong>discord.gg/gata</strong></p>`
+      }
+    ]
+  }
+];
+
+/* Flatten all lessons for easy lookup */
+const ALL_LESSONS = {};
+MODULES.forEach(m => m.lessons.forEach(l => { l.moduleId = m.id; ALL_LESSONS[l.id] = l; }));
+
+/* Quiz questions for Module 5 */
+const QUIZ_QUESTIONS = [
+  {
+    q: "What does Web3 primarily give users that Web2 does not?",
+    options: ["Faster internet speeds","Ownership of digital assets and data","More social media features","Better graphic design tools"],
+    correct: 1
+  },
+  {
+    q: "What is a blockchain?",
+    options: ["A type of cryptocurrency exchange","A software wallet for storing tokens","A distributed, immutable ledger that records transactions","A social media platform for crypto users"],
+    correct: 2
+  },
+  {
+    q: "What is the purpose of your wallet's seed phrase (recovery phrase)?",
+    options: ["It is your username for the platform","It is used to recover access to your wallet if you lose it","It is shared with the platform to verify your identity","It is the password for your email account"],
+    correct: 1
+  },
+  {
+    q: "Which best describes an NFT?",
+    options: ["A fungible token used for payments","A unique digital token representing ownership of something specific","A type of exchange for trading crypto","A method of sending money internationally"],
+    correct: 1
+  },
+  {
+    q: "What is the role of a smart contract in the GATA marketplace?",
+    options: ["To display product listings to buyers","To automatically execute transaction rules without an intermediary","To translate currencies between countries","To send marketing emails to sellers"],
+    correct: 1
+  }
+];
+
+/* ═══════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════ */
+function switchAuthTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('login-form').style.display    = tab === 'login'    ? 'block' : 'none';
+  document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+  clearAuthError();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+function clearAuthError() {
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+async function loginWithEmail() {
+  if (demoMode) { enterApp(demoUser); return; }
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  if (!email || !pass) { showAuthError('Please fill in all fields.'); return; }
+  document.getElementById('btn-login').textContent = 'Signing in...';
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    showAuthError(friendlyError(e.code));
+    document.getElementById('btn-login').textContent = 'Sign In';
+  }
+}
+
+async function registerWithEmail() {
+  if (demoMode) { enterApp(demoUser); return; }
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass  = document.getElementById('reg-password').value;
+  if (!name || !email || !pass) { showAuthError('Please fill in all fields.'); return; }
+  if (pass.length < 6) { showAuthError('Password must be at least 6 characters.'); return; }
+  document.getElementById('btn-register').textContent = 'Creating account...';
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    await cred.user.updateProfile({ displayName: name });
+    await db.collection('users').doc(cred.user.uid).set({
+      name, email, walletAddress: '', joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await db.collection('wallet_points').doc(cred.user.uid).set({
+      points: 0, history: [], updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) {
+    showAuthError(friendlyError(e.code));
+    document.getElementById('btn-register').textContent = 'Create Account';
+  }
+}
+
+async function loginWithGoogle() {
+  if (demoMode) { enterApp(demoUser); return; }
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const cred = await auth.signInWithPopup(provider);
+    // Ensure user doc exists
+    const userRef = db.collection('users').doc(cred.user.uid);
+    const snap = await userRef.get();
+    if (!snap.exists) {
+      await userRef.set({
+        name: cred.user.displayName, email: cred.user.email,
+        walletAddress: '', joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await db.collection('wallet_points').doc(cred.user.uid).set({
+        points: 0, history: [], updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  } catch(e) {
+    showAuthError(friendlyError(e.code));
+  }
+}
+
+async function logout() {
+  if (demoMode) { location.reload(); return; }
+  await auth.signOut();
+}
+
+function friendlyError(code) {
+  const map = {
+    'auth/user-not-found': 'No account found with this email.',
+    'auth/wrong-password': 'Incorrect password. Please try again.',
+    'auth/email-already-in-use': 'An account already exists with this email.',
+    'auth/invalid-email': 'Please enter a valid email address.',
+    'auth/too-many-requests': 'Too many attempts. Please try again later.',
+  };
+  return map[code] || 'An error occurred. Please try again.';
+}
+
+/* ═══════════════════════════════════════════
+   APP INIT
+═══════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  // Hide loading after animation
+  setTimeout(() => {
+    document.getElementById('loading-screen').style.opacity = '0';
+    document.getElementById('loading-screen').style.transition = 'opacity 0.4s';
+    setTimeout(() => { document.getElementById('loading-screen').style.display = 'none'; }, 400);
+  }, 2000);
+
+  if (demoMode) {
+    // Show auth immediately in demo mode
+    setTimeout(() => { document.getElementById('auth-view').style.display = 'flex'; }, 2200);
+    return;
+  }
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      enterApp(user);
+    } else {
+      document.getElementById('auth-view').style.display = 'flex';
+    }
+  });
+});
+
+async function enterApp(user) {
+  state.user = user;
+  document.getElementById('auth-view').style.display = 'none';
+  document.getElementById('app-shell').classList.add('visible');
+
+  // Set user UI
+  const name  = user.displayName || user.email.split('@')[0];
+  const email = user.email || '';
+  document.getElementById('user-display-name').textContent = name;
+  document.getElementById('user-display-email').textContent = email;
+  document.getElementById('user-avatar').textContent = name[0].toUpperCase();
+  document.getElementById('welcome-text').textContent = `Welcome back, ${name} 👋`;
+
+  await loadUserProgress();
+  renderDashboard();
+}
+
+/* ═══════════════════════════════════════════
+   DATA LOADING
+═══════════════════════════════════════════ */
+async function loadUserProgress() {
+  if (demoMode) {
+    const s = getDemoState();
+    state.points = s.points || 0;
+    state.completedLessons = new Set(s.completedLessons || []);
+    state.completedModules = new Set(s.completedModules || []);
+    state.earnHistory      = s.history || [];
+    state.quizPassed       = s.quizPassed || false;
+    return;
+  }
+  try {
+    const uid = state.user.uid;
+    const walletSnap   = await db.collection('wallet_points').doc(uid).get();
+    const progressSnap = await db.collection('progress').doc(uid).get();
+
+    if (walletSnap.exists) {
+      const d = walletSnap.data();
+      state.points      = d.points || 0;
+      state.earnHistory = d.history || [];
+    }
+    if (progressSnap.exists) {
+      const d = progressSnap.data();
+      state.completedLessons = new Set(d.completedLessons || []);
+      state.completedModules = new Set(d.completedModules || []);
+      state.quizPassed       = d.quizPassed || false;
+    }
+  } catch(e) { console.error('Error loading progress', e); }
+}
+
+async function saveProgress() {
+  if (demoMode) {
+    saveDemoState({
+      points: state.points,
+      completedLessons: [...state.completedLessons],
+      completedModules: [...state.completedModules],
+      history: state.earnHistory,
+      quizPassed: state.quizPassed
+    });
+    return;
+  }
+  try {
+    const uid = state.user.uid;
+    await db.collection('progress').doc(uid).set({
+      completedLessons: [...state.completedLessons],
+      completedModules: [...state.completedModules],
+      quizPassed:       state.quizPassed,
+      updatedAt:        firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    await db.collection('wallet_points').doc(uid).set({
+      points:    state.points,
+      history:   state.earnHistory.slice(0, 50), // cap history
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch(e) { console.error('Error saving progress', e); }
+}
+
+async function saveVideoPosition(lessonId, time) {
+  if (demoMode) return;
+  try {
+    const uid = state.user.uid;
+    await db.collection('progress').doc(uid).set({
+      [`videoProgress.${lessonId}`]: time,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch(e) {}
+}
+
+/* ═══════════════════════════════════════════
+   ROUTING
+═══════════════════════════════════════════ */
+function navigateTo(view, params = {}) {
+  closeSidebar();
+
+  // hide all views
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  state.currentView = view;
+
+  const viewEl = document.getElementById(`view-${view}`);
+  if (viewEl) viewEl.classList.add('active');
+
+  const navEl = document.getElementById(`nav-${view}`);
+  if (navEl) navEl.classList.add('active');
+
+  // Render appropriate view
+  if (view === 'dashboard')      renderDashboard();
+  if (view === 'modules')        renderModules();
+  if (view === 'wallet')         renderWallet();
+  if (view === 'progress')       renderProgress();
+  if (view === 'module-detail')  renderModuleDetail(params.moduleId);
+  if (view === 'lesson')         renderLesson(params.moduleId, params.lessonId);
+  if (view === 'quiz')           renderQuiz(params.moduleId);
+
+  window.scrollTo(0, 0);
+}
+
+/* ═══════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════ */
+function renderDashboard() {
+  updateStatsUI();
+  const grid = document.getElementById('dashboard-modules-grid');
+  // Show first 6 modules
+  const modules = MODULES.slice(0, 6);
+  grid.innerHTML = modules.map(m => moduleCardHTML(m, true)).join('');
+}
+
+function updateStatsUI() {
+  const totalLessons   = MODULES.reduce((a, m) => a + m.lessons.length, 0);
+  const doneLessons    = [...state.completedLessons].length;
+  const doneModules    = state.completedModules.size;
+  const pct            = Math.round((doneLessons / totalLessons) * 100);
+  const isComplete     = doneModules === MODULES.length;
+
+  document.getElementById('dash-points').textContent   = state.points.toLocaleString();
+  document.getElementById('dash-modules').textContent  = `${doneModules}/12`;
+  document.getElementById('dash-lessons').textContent  = doneLessons;
+  document.getElementById('dash-certs').textContent    = state.quizPassed ? '1' : '0';
+  document.getElementById('overall-pct').textContent   = pct + '%';
+  document.getElementById('overall-fill').style.width  = pct + '%';
+  document.getElementById('sidebar-points').textContent = state.points.toLocaleString();
+}
+
+function moduleCardHTML(mod, compact = false) {
+  const isDone   = state.completedModules.has(mod.id);
+  const isLocked = isModuleLocked(mod);
+  const isActive = !isDone && !isLocked;
+  const doneLessons = mod.lessons.filter(l => state.completedLessons.has(l.id)).length;
+
+  let badgeClass = 'badge-locked', badgeText = 'Locked';
+  if (isDone)   { badgeClass = 'badge-done';   badgeText = '✓ Complete'; }
+  if (isActive) { badgeClass = 'badge-active'; badgeText = '▶ Active'; }
+
+  let cardClass = 'module-card';
+  if (isDone)   cardClass += ' completed';
+  if (isLocked) cardClass += ' locked';
+
+  const action = isLocked ? '' : `onclick="navigateTo('module-detail',{moduleId:'${mod.id}'})"`;
+
+  return `
+    <div class="${cardClass}" ${action}>
+      <div class="mc-top">
+        <div>
+          <div class="mc-num">MODULE ${mod.order.toString().padStart(2,'0')} ${mod.icon}</div>
+        </div>
+        <span class="mc-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="mc-title">${mod.title}</div>
+      <div class="mc-desc">${mod.description}</div>
+      <div class="mc-footer">
+        <span class="mc-lessons">${doneLessons}/${mod.lessons.length} lessons</span>
+        <span class="mc-points">+${mod.points} pts</span>
+      </div>
+    </div>`;
+}
+
+function isModuleLocked(mod) {
+  if (mod.order === 1) return false;
+  const prevMod = MODULES.find(m => m.order === mod.order - 1);
+  return prevMod && !state.completedModules.has(prevMod.id);
+}
+
+/* ═══════════════════════════════════════════
+   MODULES
+═══════════════════════════════════════════ */
+function renderModules() {
+  document.getElementById('all-modules-grid').innerHTML =
+    MODULES.map(m => moduleCardHTML(m)).join('');
+}
+
+/* ═══════════════════════════════════════════
+   MODULE DETAIL
+═══════════════════════════════════════════ */
+function renderModuleDetail(moduleId) {
+  const mod = MODULES.find(m => m.id === moduleId);
+  if (!mod) { navigateTo('modules'); return; }
+  state.currentModuleId = moduleId;
+
+  const doneLessons = mod.lessons.filter(l => state.completedLessons.has(l.id)).length;
+  const isLocked    = isModuleLocked(mod);
+
+  const lessonsHTML = mod.lessons.map((l, i) => {
+    const isDone   = state.completedLessons.has(l.id);
+    const isLessonLocked = isLocked || (i > 0 && !state.completedLessons.has(mod.lessons[i-1].id));
+    let statusClass = isLessonLocked ? 'locked' : (isDone ? 'completed' : '');
+    let iconClass   = isLessonLocked ? 'locked' : (isDone ? 'done' : 'active');
+    let icon        = isLessonLocked ? '🔒' : (isDone ? '✓' : (l.isQuiz ? '📝' : '▶'));
+    let action      = (isLessonLocked || isLocked) ? ''
+      : l.isQuiz
+        ? `onclick="navigateTo('quiz',{moduleId:'${mod.id}'})"` 
+        : `onclick="navigateTo('lesson',{moduleId:'${mod.id}',lessonId:'${l.id}'})"`;
+
+    return `
+      <div class="lesson-card ${statusClass}" ${action}>
+        <div class="lc-status-icon ${iconClass}">${icon}</div>
+        <div class="lc-info">
+          <div class="lc-title">${l.title}</div>
+          <div class="lc-subtitle">${l.subtitle || ''}</div>
+        </div>
+        <div class="lc-arrow">›</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('module-detail-content').innerHTML = `
+    <div class="module-hero" data-number="${mod.order}">
+      <div class="mh-mod-num">MODULE ${mod.order.toString().padStart(2,'0')} — ${mod.icon} ${mod.title.toUpperCase()}</div>
+      <div class="mh-title">${mod.title}</div>
+      <div class="mh-desc">${mod.description}</div>
+      <div class="mh-meta">
+        <div class="mh-meta-item"><span>📚</span> <span><strong>${mod.lessons.length}</strong> Lessons</span></div>
+        <div class="mh-meta-item"><span>🪙</span> <span><strong>+${mod.points}</strong> GATA Points</span></div>
+        <div class="mh-meta-item"><span>✅</span> <span><strong>${doneLessons}/${mod.lessons.length}</strong> Complete</span></div>
+        ${mod.hasQuiz ? '<div class="mh-meta-item"><span>📝</span> <span>Includes <strong>Knowledge Test</strong></span></div>' : ''}
+      </div>
+    </div>
+    <div class="section-title">Lessons</div>
+    <div class="lessons-list">${lessonsHTML}</div>`;
+}
+
+/* ═══════════════════════════════════════════
+   LESSON
+═══════════════════════════════════════════ */
+function renderLesson(moduleId, lessonId) {
+  const mod    = MODULES.find(m => m.id === moduleId);
+  const lesson = ALL_LESSONS[lessonId];
+  if (!mod || !lesson) { navigateTo('modules'); return; }
+
+  state.currentModuleId = moduleId;
+  state.currentLessonId = lessonId;
+
+  const isDone = state.completedLessons.has(lessonId);
+
+  document.getElementById('lesson-breadcrumb').textContent = `${mod.title} › Lesson ${lesson.order}`;
+  document.getElementById('lesson-title').textContent      = lesson.title;
+  document.getElementById('video-url-display').textContent = lesson.videoUrl || 'No video configured';
+  document.getElementById('lesson-summary-content').innerHTML = lesson.summary;
+  document.getElementById('lesson-back-btn').onclick = () => navigateTo('module-detail', { moduleId });
+
+  const btnComplete = document.getElementById('btn-complete-lesson');
+  btnComplete.disabled   = isDone;
+  btnComplete.textContent = isDone ? '✓ Already Completed' : '✓ Mark Complete & Earn Points';
+
+  // Lesson nav sidebar
+  document.getElementById('lesson-nav-list').innerHTML = mod.lessons.map(l => {
+    const done    = state.completedLessons.has(l.id);
+    const current = l.id === lessonId;
+    const action  = l.isQuiz
+      ? `onclick="navigateTo('quiz',{moduleId:'${moduleId}'})"` 
+      : `onclick="navigateTo('lesson',{moduleId:'${moduleId}',lessonId:'${l.id}'})"`;
+    return `
+      <div class="lesson-nav-item ${current?'current':''} ${done?'completed-lesson':''}" ${action}>
+        <div class="lesson-nav-dot"></div>
+        ${l.title}
+      </div>`;
+  }).join('');
+
+  // Reward info
+  document.getElementById('lesson-reward-info').innerHTML = `
+    <div style="margin-bottom:0.6rem">
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.2rem">This Lesson</div>
+      <div class="chip chip-gold">🪙 +50 GATA Points</div>
+    </div>
+    <div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.2rem">Module Completion</div>
+      <div class="chip chip-teal">⬡ +${mod.points} pts total</div>
+    </div>`;
+
+  document.getElementById('saved-time-display').textContent = '▸ Progress auto-saved';
+}
+
+async function completeCurrentLesson() {
+  const { currentLessonId, currentModuleId } = state;
+  if (!currentLessonId || state.completedLessons.has(currentLessonId)) return;
+
+  state.completedLessons.add(currentLessonId);
+
+  // Check if module is now complete
+  const mod = MODULES.find(m => m.id === currentModuleId);
+  const allDone = mod && mod.lessons.every(l => state.completedLessons.has(l.id) || l.isQuiz);
+
+  let earnedPts = 50;
+  let toastMsg  = 'Lesson completed!';
+
+  if (allDone && !state.completedModules.has(currentModuleId)) {
+    state.completedModules.add(currentModuleId);
+    earnedPts += mod.points;
+    toastMsg   = `Module "${mod.title}" complete!`;
+  }
+
+  await addPoints(earnedPts, toastMsg);
+
+  const btn = document.getElementById('btn-complete-lesson');
+  btn.disabled     = true;
+  btn.textContent  = '✓ Already Completed';
+  document.getElementById('saved-time-display').textContent = '✓ Marked complete!';
+
+  await saveProgress();
+  updateStatsUI();
+
+  // Check full completion
+  if (state.completedModules.size === MODULES.length) {
+    setTimeout(() => {
+      addPoints(1000, '🏆 Full onboarding complete!');
+      document.getElementById('completion-points-display').textContent = state.points.toLocaleString();
+      navigateTo('completion');
+    }, 2000);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   QUIZ
+═══════════════════════════════════════════ */
+function renderQuiz(moduleId) {
+  state.currentModuleId = moduleId;
+  document.getElementById('quiz-back-btn').onclick = () => navigateTo('module-detail', { moduleId });
+  state.quizState = { current: 0, answers: Array(QUIZ_QUESTIONS.length).fill(null), answered: false };
+  renderQuestion(0);
+}
+
+function renderQuestion(idx) {
+  const qs = state.quizState;
+  const q  = QUIZ_QUESTIONS[idx];
+  const total = QUIZ_QUESTIONS.length;
+
+  document.getElementById('quiz-progress-fill').style.width = `${((idx) / total) * 100}%`;
+  document.getElementById('q-counter').textContent = `Question ${idx+1} of ${total}`;
+  document.getElementById('btn-quiz-next').disabled = true;
+  document.getElementById('btn-quiz-next').textContent = idx < total - 1 ? 'Next →' : 'Submit Quiz';
+
+  document.getElementById('quiz-question-container').innerHTML = `
+    <div class="question-card">
+      <div class="q-number">QUESTION ${idx+1} OF ${total}</div>
+      <div class="q-text">${q.q}</div>
+      <div class="options">
+        ${q.options.map((opt, i) => `
+          <div class="option" id="opt-${i}" onclick="selectOption(${i})">
+            <div class="option-letter">${'ABCD'[i]}</div>
+            ${opt}
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function selectOption(i) {
+  if (state.quizState.answered) return;
+  state.quizState.answers[state.quizState.current] = i;
+  document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+  document.getElementById(`opt-${i}`).classList.add('selected');
+  document.getElementById('btn-quiz-next').disabled = false;
+}
+
+function nextQuestion() {
+  const qs  = state.quizState;
+  const idx = qs.current;
+  const total = QUIZ_QUESTIONS.length;
+
+  // Show correct/wrong for current
+  const correct = QUIZ_QUESTIONS[idx].correct;
+  const chosen  = qs.answers[idx];
+  if (chosen === correct) {
+    document.getElementById(`opt-${chosen}`).classList.add('correct');
+    document.getElementById(`opt-${chosen}`).classList.remove('selected');
+  } else {
+    if (chosen !== null) {
+      document.getElementById(`opt-${chosen}`).classList.add('wrong');
+      document.getElementById(`opt-${chosen}`).classList.remove('selected');
+    }
+    document.getElementById(`opt-${correct}`).classList.add('correct');
+  }
+  document.getElementById('btn-quiz-next').disabled = true;
+
+  if (idx < total - 1) {
+    qs.current++;
+    setTimeout(() => renderQuestion(qs.current), 1000);
+  } else {
+    setTimeout(() => showQuizResult(), 1000);
+  }
+}
+
+async function showQuizResult() {
+  const qs      = state.quizState;
+  const correct = QUIZ_QUESTIONS.filter((q, i) => qs.answers[i] === q.correct).length;
+  const total   = QUIZ_QUESTIONS.length;
+  const score   = Math.round((correct / total) * 100);
+  const pass    = score >= 80;
+
+  document.getElementById('quiz-progress-fill').style.width = '100%';
+
+  const retryBtn = !pass ? `<button class="btn-retry" onclick="renderQuiz(state.currentModuleId)">Try Again</button>` : '';
+
+  document.getElementById('quiz-question-container').innerHTML = `
+    <div class="quiz-result">
+      <div class="qr-score-ring ${pass?'pass':'fail'}">
+        <div class="qr-score ${pass?'pass':'fail'}">${score}%</div>
+        <div class="qr-label">${correct}/${total} correct</div>
+      </div>
+      <div class="qr-title">${pass ? '🎉 Quiz Passed!' : '📚 Study More'}</div>
+      <div class="qr-sub">${pass
+        ? 'You\'ve demonstrated solid Web3 knowledge. You are now eligible for the 1Billion2Web3 NFT Certificate!'
+        : 'You need 80% or higher to pass. Review the lessons and try again.'}</div>
+      ${retryBtn}
+      ${pass ? `<button class="btn-primary" style="width:auto;padding:0.7rem 1.5rem" onclick="navigateTo('module-detail',{moduleId:state.currentModuleId})">Continue →</button>` : ''}
+    </div>`;
+
+  document.getElementById('btn-quiz-next').style.display = 'none';
+  document.getElementById('q-counter').textContent = '';
+
+  if (pass && !state.quizPassed) {
+    state.quizPassed = true;
+    // Complete the quiz lesson
+    const mod = MODULES.find(m => m.id === state.currentModuleId);
+    if (mod) {
+      const quizLesson = mod.lessons.find(l => l.isQuiz);
+      if (quizLesson) state.completedLessons.add(quizLesson.id);
+    }
+    await addPoints(200, '🎓 Quiz passed! Certificate eligibility unlocked');
+    await saveProgress();
+    updateStatsUI();
+  }
+}
+
+/* ═══════════════════════════════════════════
+   WALLET
+═══════════════════════════════════════════ */
+function renderWallet() {
+  document.getElementById('wallet-points-display').textContent = state.points.toLocaleString();
+
+  const listEl = document.getElementById('earn-history-list');
+  if (!state.earnHistory.length) {
+    listEl.innerHTML = '<div class="eh-empty">No earnings yet. Start a lesson to earn GATA Points!</div>';
+    return;
+  }
+  listEl.innerHTML = state.earnHistory.slice(0, 20).map(h => `
+    <div class="eh-item">
+      <div class="eh-dot"></div>
+      <div class="eh-info">
+        <div class="eh-desc">${h.desc}</div>
+        <div class="eh-time">${h.time}</div>
+      </div>
+      <div class="eh-pts">+${h.pts}</div>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════
+   PROGRESS
+═══════════════════════════════════════════ */
+function renderProgress() {
+  const roadmap = document.getElementById('progress-roadmap');
+  roadmap.innerHTML = MODULES.map(mod => {
+    const isDone   = state.completedModules.has(mod.id);
+    const isLocked = isModuleLocked(mod);
+    const isActive = !isDone && !isLocked;
+    const doneLessons = mod.lessons.filter(l => state.completedLessons.has(l.id)).length;
+
+    let dotClass   = isLocked ? '' : (isDone ? 'done' : (isActive ? 'active' : ''));
+    let cardClass  = isDone ? 'done' : (isActive ? 'active' : '');
+    let statusIcon = isLocked ? '🔒' : (isDone ? '✅' : (isActive ? '▶' : '⬜'));
+    let titleClass = isDone ? 'done' : (isActive ? 'active' : '');
+
+    return `
+      <div class="roadmap-step">
+        <div class="rs-dot ${dotClass}">${mod.order}</div>
+        <div class="rs-card ${cardClass}" onclick="${isLocked ? '' : `navigateTo('module-detail',{moduleId:'${mod.id}'})`}" style="${isLocked ? '' : 'cursor:pointer'}">
+          <div>
+            <div class="rs-title ${titleClass}">${mod.icon} ${mod.title}</div>
+            <div class="rs-lessons">${doneLessons}/${mod.lessons.length} lessons · +${mod.points} pts</div>
+          </div>
+          <div class="rs-status">${statusIcon}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Update cert statuses
+  document.getElementById('cert-1b2w3-status').textContent =
+    state.quizPassed ? '✓ Earned' : 'Complete Module 5 Quiz';
+  document.getElementById('cert-1b2w3-status').className =
+    'cert-status ' + (state.quizPassed ? 'earned' : 'pending');
+  document.getElementById('cert-gata-pass-status').textContent =
+    state.completedModules.size === MODULES.length ? '✓ Earned' : 'Complete All 12 Modules';
+  document.getElementById('cert-gata-pass-status').className =
+    'cert-status ' + (state.completedModules.size === MODULES.length ? 'earned' : 'pending');
+}
+
+/* ═══════════════════════════════════════════
+   POINTS SYSTEM
+═══════════════════════════════════════════ */
+async function addPoints(pts, desc) {
+  state.points += pts;
+
+  const historyEntry = {
+    pts, desc,
+    time: new Date().toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' })
+  };
+  state.earnHistory.unshift(historyEntry);
+
+  showToast(pts, desc);
+  document.getElementById('sidebar-points').textContent = state.points.toLocaleString();
+}
+
+function showToast(pts, msg) {
+  const toast = document.getElementById('points-toast');
+  document.getElementById('toast-pts').textContent  = `+${pts} GATA Points`;
+  document.getElementById('toast-msg').textContent  = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR (mobile)
+═══════════════════════════════════════════ */
+function toggleSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('sidebar-overlay');
+  const isOpen   = sidebar.classList.contains('open');
+  sidebar.classList.toggle('open', !isOpen);
+  overlay.classList.toggle('open', !isOpen);
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
+/* ═══════════════════════════════════════════
+   VIDEO POSITION TRACKING
+   (attach to a real <video> element if needed)
+═══════════════════════════════════════════ */
+function attachVideoTracking(videoEl, lessonId) {
+  if (!videoEl) return;
+  videoEl.addEventListener('timeupdate', () => {
+    if (Math.floor(videoEl.currentTime) % 5 === 0) {
+      saveVideoPosition(lessonId, videoEl.currentTime);
+      document.getElementById('saved-time-display').textContent =
+        `▸ Saved at ${Math.floor(videoEl.currentTime)}s`;
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+// Initial view setup after auth
+document.getElementById('view-dashboard').classList.add('active');
+document.getElementById('nav-dashboard').classList.add('active');
+</script>
+</body>
+</html>
