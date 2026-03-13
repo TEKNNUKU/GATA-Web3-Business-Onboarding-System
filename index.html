@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GATA Web3 Onboarding — 1Billion2Web3</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Rajdhani:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+:root {
+  --bg:        #1C1C1C;
+  --bg-d:      #141414;
+  --bg-c:      #242424;
+  --bg-c2:     #2C2C2C;
+  --bg-p:      #1A1A1A;
+  --border:    #333;
+  --border-g:  rgba(201,168,67,0.3);
+  --gold:      #C9A843;
+  --gold-l:    #E8C85A;
+  --gold-d:    #9A7D2A;
+  --gold-glow: rgba(201,168,67,0.15);
+  --gold-bg:   rgba(201,168,67,0.08);
+  --green:     #4CAF7D;
+  --green-bg:  rgba(76,175,125,0.1);
+  --red:       #E05555;
+  --purple:    #8B6FD4;
+  --teal:      #4ABFBF;
+  --tw:        #F0F0F0;
+  --tb:        #BBBBBB;
+  --tm:        #777;
+  --tf:        #3A3A3A;
+  --fd:        'Barlow Condensed',sans-serif;
+  --fh:        'Rajdhani',sans-serif;
+  --fb:        'Barlow',sans-serif;
+  --fm:        'Space Mono',monospace;
+  --r:         8px; --rl:14px;
+  --nw:        262px; --tr:.2s ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px}
+body{background:var(--bg);color:var(--tw);font-family:var(--fb);min-height:100vh;overflow-x:hidden}
+a{color:var(--gold);text-decoration:none}
+button{cursor:pointer;border:none;outline:none;font-family:var(--fh)}
+input{font-family:var(--fb);outline:none}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg-d)}::-webkit-scrollbar-thumb{background:var(--gold-d);border-radius:10px}
+
+/* BG TEXTURE */
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(201,168,67,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,67,.03) 1px,transparent 1px);
+  background-size:50px 50px;pointer-events:none;z-index:0}
+
+/* LOADING */
+#ls{position:fixed;inset:0;z-index:9999;background:var(--bg-d);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem}
+#ls img.spin{width:80px;height:80px;border-radius:50%;animation:spin 3s linear infinite;
+  filter:drop-shadow(0 0 20px rgba(201,168,67,.5))}
+#ls img.wordmark{height:34px;filter:drop-shadow(0 0 8px rgba(201,168,67,.4))}
+.lbar{width:200px;height:2px;background:var(--border);border-radius:10px;overflow:hidden}
+.lfill{height:100%;background:linear-gradient(90deg,var(--gold-d),var(--gold),var(--gold-l));
+  animation:lfill 2s ease forwards}
+.ltag{font-family:var(--fm);font-size:.68rem;color:var(--tm);letter-spacing:1.5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes lfill{from{width:0}to{width:100%}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* TOAST */
+#toast{position:fixed;top:1.5rem;right:1.5rem;z-index:9998;
+  background:linear-gradient(135deg,#1A1500,#0D0D00);
+  border:1px solid var(--border-g);border-top:2px solid var(--gold);
+  border-radius:var(--rl);padding:.9rem 1.4rem;
+  display:flex;align-items:center;gap:.8rem;min-width:240px;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
+  transform:translateX(160%);transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
+#toast.show{transform:translateX(0)}
+#toast img{width:38px;height:38px;border-radius:50%;flex-shrink:0}
+.t-pts{font-family:var(--fd);font-weight:700;font-size:1rem;color:var(--gold);letter-spacing:1px}
+.t-msg{font-size:.75rem;color:var(--tb);margin-top:.1rem}
+
+/* AUTH */
+#av{display:none;align-items:center;justify-content:center;
+  min-height:100vh;padding:2rem;position:relative;z-index:1}
+.acard{background:var(--bg-c);border:1px solid var(--border-g);border-radius:var(--rl);
+  padding:2.5rem;width:100%;max-width:430px;
+  box-shadow:0 0 60px rgba(0,0,0,.5),0 0 40px rgba(201,168,67,.04);
+  animation:fadeUp .4s ease;position:relative}
+.acard::before{content:'';position:absolute;top:0;left:5%;right:5%;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.abrand{text-align:center;margin-bottom:2rem}
+.abrand img.logo{height:44px;margin:0 auto .5rem;display:block;
+  filter:drop-shadow(0 0 10px rgba(201,168,67,.4))}
+.abrand img.icon{width:64px;height:64px;border-radius:50%;margin:0 auto .8rem;display:block;
+  filter:drop-shadow(0 0 14px rgba(201,168,67,.5))}
+.abrand .tag{font-family:var(--fm);font-size:.68rem;color:var(--tm);letter-spacing:1.5px}
+.atabs{display:flex;background:var(--bg-p);border:1px solid var(--border);
+  border-radius:var(--r);padding:3px;margin-bottom:1.8rem}
+.atab{flex:1;padding:.6rem;font-family:var(--fh);font-size:.88rem;font-weight:600;
+  border-radius:6px;background:transparent;color:var(--tm);
+  letter-spacing:.5px;transition:var(--tr)}
+.atab.on{background:var(--gold);color:#0D0900}
+.fg{margin-bottom:1.1rem}
+.fg label{display:block;font-family:var(--fh);font-size:.7rem;font-weight:700;
+  color:var(--tm);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:.35rem}
+.fg input{width:100%;padding:.72rem 1rem;background:var(--bg-p);
+  border:1px solid var(--border);border-radius:var(--r);
+  color:var(--tw);font-size:.9rem;transition:var(--tr)}
+.fg input:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-glow)}
+.bprim{width:100%;padding:.85rem;background:linear-gradient(135deg,var(--gold),var(--gold-d));
+  color:#0D0900;font-family:var(--fd);font-weight:700;font-size:1rem;
+  border-radius:var(--r);letter-spacing:1px;text-transform:uppercase;transition:var(--tr)}
+.bprim:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(201,168,67,.28)}
+.adiv{display:flex;align-items:center;gap:1rem;margin:1.1rem 0;
+  color:var(--tm);font-size:.78rem}
+.adiv::before,.adiv::after{content:'';flex:1;height:1px;background:var(--border)}
+.bgoog{width:100%;padding:.78rem;background:var(--bg-p);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--tb);font-size:.88rem;
+  display:flex;align-items:center;justify-content:center;gap:.7rem;transition:var(--tr)}
+.bgoog:hover{border-color:var(--border-g);color:var(--tw)}
+.aerr{background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.3);
+  border-radius:var(--r);padding:.65rem 1rem;color:var(--red);
+  font-size:.82rem;margin-bottom:1rem;display:none}
+
+/* APP SHELL */
+#shell{display:none;min-height:100vh;position:relative;z-index:1}
+#shell.on{display:flex}
+
+/* SIDEBAR */
+#sb{width:var(--nw);background:var(--bg-d);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;position:fixed;top:0;left:0;
+  height:100vh;z-index:100;overflow-y:auto;
+  transition:transform var(--tr)}
+.sb-brand{padding:1.3rem 1.2rem 1rem;border-bottom:1px solid var(--border)}
+.sb-brand img{height:34px;filter:drop-shadow(0 0 6px rgba(201,168,67,.3))}
+.sb-wallet{margin:1rem 1rem 0;
+  background:linear-gradient(135deg,rgba(201,168,67,.1),rgba(201,168,67,.04));
+  border:1px solid var(--border-g);border-radius:var(--r);
+  padding:1rem;cursor:pointer;transition:var(--tr);position:relative;overflow:hidden}
+.sb-wallet::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.sb-wallet:hover{border-color:var(--gold)}
+.sw-label{font-family:var(--fh);font-size:.68rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-d)}
+.sw-pts{font-family:var(--fd);font-size:1.9rem;font-weight:700;
+  color:var(--gold);letter-spacing:2px;line-height:1.1}
+.sw-sub{font-size:.68rem;color:var(--tm);margin-top:.15rem}
+.nav-sec{padding:1rem .8rem 0}
+.nav-lbl{font-family:var(--fh);font-size:.65rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:2px;color:var(--tf);
+  padding:0 .4rem;margin-bottom:.35rem}
+.ni{display:flex;align-items:center;gap:.7rem;padding:.62rem .85rem;
+  border-radius:var(--r);color:var(--tm);font-family:var(--fh);font-size:.8rem;
+  font-weight:600;letter-spacing:.3px;text-transform:uppercase;
+  cursor:pointer;transition:var(--tr);margin-bottom:2px;border:1px solid transparent}
+.ni:hover{background:var(--bg-c);color:var(--tw)}
+.ni.on{background:var(--gold-bg);color:var(--gold);border-color:var(--border-g)}
+.ni-ico{width:18px;text-align:center;flex-shrink:0;font-size:.9rem}
+.sb-foot{margin-top:auto;padding:1rem;border-top:1px solid var(--border)}
+.upill{display:flex;align-items:center;gap:.65rem;padding:.4rem 0;margin-bottom:.5rem}
+.uav{width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--gold-d),var(--gold));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fd);font-weight:700;font-size:.9rem;color:#0D0900;flex-shrink:0}
+.un{font-family:var(--fh);font-size:.85rem;font-weight:600;color:var(--tw);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:155px}
+.ue{font-size:.7rem;color:var(--tm);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:155px}
+.blog{width:100%;background:transparent;color:var(--tm);font-family:var(--fh);
+  font-size:.73rem;font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+  padding:.42rem;border:1px solid var(--border);border-radius:6px;transition:var(--tr)}
+.blog:hover{color:var(--red);border-color:var(--red)}
+
+/* HAMBURGER */
+.ham{display:none;position:fixed;top:1rem;left:1rem;z-index:200;
+  width:40px;height:40px;background:var(--bg-c);
+  border:1px solid var(--border-g);border-radius:var(--r);
+  align-items:center;justify-content:center;font-size:1.1rem;color:var(--gold)}
+.ov{display:none;position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.8)}
+
+/* MAIN */
+#mc{margin-left:var(--nw);flex:1;padding:2rem;min-height:100vh}
+.view{display:none;animation:fadeUp .3s ease}
+.view.on{display:block}
+.ph{margin-bottom:1.8rem}
+.bc{font-family:var(--fm);font-size:.68rem;color:var(--tm);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:.45rem}
+.ph h2{font-family:var(--fd);font-size:2.2rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:2px;line-height:1}
+.ph h2 span{color:var(--gold)}
+.ph p{color:var(--tb);margin-top:.45rem;font-size:.87rem;max-width:600px;line-height:1.6}
+
+/* WELCOME BANNER */
+.wb{background:var(--bg-c);border:1px solid var(--border-g);border-left:3px solid var(--gold);
+  border-radius:var(--rl);padding:1.6rem 1.8rem;margin-bottom:1.5rem;
+  display:flex;align-items:center;gap:1.2rem;position:relative;overflow:hidden}
+.wb::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,var(--gold),transparent)}
+.wb img{width:52px;height:52px;flex-shrink:0;filter:drop-shadow(0 0 10px rgba(201,168,67,.4))}
+.wb h3{font-family:var(--fd);font-size:1.2rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:.25rem}
+.wb p{color:var(--tb);font-size:.84rem;line-height:1.5}
+.wb strong{color:var(--gold)}
+
+/* STATS */
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:1rem;margin-bottom:1.4rem}
+.sc{background:var(--bg-c);border:1px solid var(--border);border-radius:var(--rl);
+  padding:1.2rem 1.4rem;transition:var(--tr);position:relative;overflow:hidden}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--gold),transparent);opacity:0;transition:var(--tr)}
+.sc:hover{border-color:var(--border-g);transform:translateY(-2px)}
+.sc:hover::before{opacity:1}
+.sl{font-family:var(--fh);font-size:.7rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:1.5px;color:var(--tm);margin-bottom:.45rem}
+.sv{font-family:var(--fd);font-size:2.2rem;font-weight:700;line-height:1;letter-spacing:1px}
+.ss{font-size:.7rem;color:var(--tm);margin-top:.25rem}
+.cg{color:var(--gold)}.cc{color:var(--teal)}.cgr{color:var(--green)}.cp{color:var(--purple)}
+
+/* PROGRESS BAR */
+.pw{margin-bottom:1.4rem}
+.pm{display:flex;justify-content:space-between;margin-bottom:.45rem}
+.pml{font-family:var(--fh);font-size:.75rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;color:var(--tm)}
+.pmp{font-family:var(--fd);font-size:.95rem;font-weight:700;color:var(--gold)}
+.pt{height:6px;background:var(--border);border-radius:10px;overflow:hidden}
+.pf{height:100%;background:linear-gradient(90deg,var(--gold-d),var(--gold),var(--gold-l));
+  border-radius:10px;transition:width 1s ease}
+
+/* MODULE CARDS */
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1rem}
+.mc{background:var(--bg-c);border:1px solid var(--border);border-radius:var(--rl);
+  padding:1.35rem;cursor:pointer;transition:var(--tr);position:relative;overflow:hidden}
+.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--gold),transparent);opacity:0;transition:var(--tr)}
+.mc:hover{border-color:var(--border-g);transform:translateY(-2px)}
+.mc:hover::before{opacity:1}
+.mc.done{border-color:rgba(76,175,125,.3)}
+.mc.done::before{background:linear-gradient(90deg,var(--green),transparent);opacity:1}
+.mc.lk{opacity:.42;cursor:not-allowed}
+.mc.lk:hover{transform:none;border-color:var(--border)}
+.mc.lk:hover::before{opacity:0}
+.mc-top{display:flex;align-items:flex-start;justify-content:space-between;
+  gap:.8rem;margin-bottom:.8rem}
+.mc-num{font-family:var(--fm);font-size:.67rem;color:var(--gold-d);letter-spacing:1px}
+.badge{font-family:var(--fh);font-size:.64rem;font-weight:700;
+  padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.bd{background:rgba(76,175,125,.15);color:var(--green)}
+.ba{background:rgba(201,168,67,.15);color:var(--gold)}
+.bl{background:rgba(60,60,60,.5);color:var(--tm)}
+.mc-title{font-family:var(--fd);font-size:1.05rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:.35rem;line-height:1.2}
+.mc-desc{font-size:.81rem;color:var(--tb);line-height:1.5;margin-bottom:.85rem}
+.mc-foot{display:flex;align-items:center;justify-content:space-between}
+.mc-less{font-family:var(--fh);font-size:.7rem;color:var(--tm)}
+.mc-pts{font-family:var(--fd);font-size:.82rem;font-weight:700;color:var(--gold);letter-spacing:1px}
+
+/* BACK BTN */
+.bbtn{display:inline-flex;align-items:center;gap:.5rem;background:transparent;
+  color:var(--tm);font-family:var(--fh);font-size:.78rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.5px;padding:.5rem 0;
+  margin-bottom:1.4rem;cursor:pointer;transition:var(--tr)}
+.bbtn:hover{color:var(--gold)}
+
+/* MODULE DETAIL HERO */
+.mhero{background:var(--bg-c);border:1px solid var(--border);border-radius:var(--rl);
+  padding:2rem;margin-bottom:1.4rem;position:relative;overflow:hidden}
+.mhero::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--gold),var(--gold-l),transparent)}
+.mhero::after{content:attr(data-n);position:absolute;right:1.5rem;top:50%;
+  transform:translateY(-50%);font-family:var(--fd);font-size:9rem;font-weight:800;
+  color:rgba(201,168,67,.04);line-height:1;pointer-events:none}
+.mn{font-family:var(--fm);font-size:.68rem;color:var(--gold-d);
+  letter-spacing:1.5px;margin-bottom:.45rem}
+.mt{font-family:var(--fd);font-size:2rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:2px;margin-bottom:.55rem}
+.md{color:var(--tb);max-width:560px;line-height:1.6;font-size:.87rem}
+.mm{display:flex;gap:1.4rem;margin-top:1.1rem;flex-wrap:wrap}
+.mmi{display:flex;align-items:center;gap:.4rem;font-family:var(--fh);
+  font-size:.78rem;color:var(--tm);font-weight:600}
+.mmi strong{color:var(--tw)}
+
+/* LESSONS LIST */
+.llist{display:flex;flex-direction:column;gap:.65rem}
+.lc{background:var(--bg-c);border:1px solid var(--border);border-radius:var(--r);
+  padding:1rem 1.3rem;display:flex;align-items:center;gap:.9rem;
+  cursor:pointer;transition:var(--tr)}
+.lc:hover{border-color:var(--border-g);background:var(--bg-c2)}
+.lc.done{border-color:rgba(76,175,125,.25)}
+.lc.lk{opacity:.4;cursor:not-allowed}
+.lc.lk:hover{background:var(--bg-c);border-color:var(--border)}
+.lico{width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:.88rem}
+.lico.d{background:rgba(76,175,125,.15);color:var(--green)}
+.lico.a{background:var(--gold-bg);color:var(--gold)}
+.lico.l{background:var(--border);color:var(--tm)}
+.lt{font-family:var(--fh);font-weight:700;color:var(--tw);
+  font-size:.88rem;text-transform:uppercase;letter-spacing:.4px;margin-bottom:.12rem}
+.ls{font-size:.73rem;color:var(--tm)}
+.la{color:var(--tm);font-size:.95rem;margin-left:auto}
+.lc:not(.lk):hover .la{color:var(--gold)}
+
+/* LESSON VIEW */
+.ll{display:grid;grid-template-columns:1fr 310px;gap:1.4rem}
+@media(max-width:900px){.ll{grid-template-columns:1fr}}
+.vbox{background:var(--bg-d);border:1px solid var(--border);
+  border-radius:var(--rl);overflow:hidden;margin-bottom:.9rem}
+.vph{aspect-ratio:16/9;background:linear-gradient(135deg,#0A0A0A,#181400);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:.9rem;position:relative;overflow:hidden}
+.vph::before{content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(201,168,67,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(201,168,67,.05) 1px,transparent 1px);
+  background-size:30px 30px}
+.vpc{width:58px;height:58px;border-radius:50%;border:2px solid var(--border-g);
+  background:var(--gold-bg);display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;z-index:1}
+.vpt{font-family:var(--fh);font-size:.78rem;color:var(--tm);
+  text-transform:uppercase;letter-spacing:1px;z-index:1;text-align:center}
+.vpu{font-family:var(--fm);font-size:.67rem;color:var(--gold-d);background:var(--gold-bg);
+  padding:3px 10px;border-radius:6px;z-index:1;
+  max-width:88%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lctrl{background:var(--bg-c);border:1px solid var(--border);border-radius:var(--r);
+  padding:.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:.6rem}
+.lcsaved{font-family:var(--fm);font-size:.7rem;color:var(--tm)}
+.bcomplete{background:linear-gradient(135deg,var(--green),#35A067);
+  color:#fff;font-family:var(--fd);font-weight:700;font-size:.82rem;
+  padding:.58rem 1.3rem;border-radius:var(--r);letter-spacing:.5px;
+  text-transform:uppercase;transition:var(--tr)}
+.bcomplete:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(76,175,125,.3)}
+.bcomplete:disabled{background:var(--border);cursor:not-allowed;transform:none;color:var(--tm)}
+.lsum{background:var(--bg-c);border:1px solid var(--border);
+  border-radius:var(--rl);padding:1.6rem;margin-top:.9rem}
+.lsum h3{font-family:var(--fd);font-size:.9rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);
+  padding-bottom:.7rem;border-bottom:1px solid var(--border);margin-bottom:.9rem}
+.lsc{font-size:.87rem;line-height:1.75;color:var(--tb)}
+.lsc p{margin-bottom:.75rem}
+.lsc ul,.lsc ol{padding-left:1.3rem}
+.lsc li{margin-bottom:.35rem}
+.lsc li::marker{color:var(--gold)}
+.lsc strong{color:var(--tw);font-weight:600}
+.lscard{background:var(--bg-c);border:1px solid var(--border);
+  border-radius:var(--rl);padding:1.2rem;margin-bottom:.9rem}
+.lscard h4{font-family:var(--fd);font-weight:700;font-size:.82rem;
+  text-transform:uppercase;letter-spacing:1px;padding-bottom:.55rem;
+  border-bottom:1px solid var(--border);margin-bottom:.8rem;
+  display:flex;align-items:center;gap:.4rem}
+.lni{display:flex;align-items:center;gap:.65rem;padding:.52rem .65rem;
+  border-radius:6px;font-family:var(--fh);font-size:.78rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.3px;color:var(--tm);
+  cursor:pointer;margin-bottom:2px;transition:var(--tr)}
+.lni:hover{background:var(--bg-c2);color:var(--tw)}
+.lni.cur{background:var(--gold-bg);color:var(--gold)}
+.lni.dn{color:var(--green)}
+.lnd{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+
+/* QUIZ */
+.qwrap{max-width:650px;margin:0 auto}
+.qhead{background:var(--bg-c);border:1px solid var(--border);
+  border-top:3px solid var(--purple);border-radius:var(--rl);
+  padding:1.8rem;margin-bottom:1.4rem;text-align:center}
+.qhead .qi{font-size:2.3rem;margin-bottom:.4rem}
+.qhead h2{font-family:var(--fd);font-size:1.4rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:2px;margin-bottom:.3rem}
+.qhead p{color:var(--tb);font-size:.84rem}
+.qpbar{height:3px;background:var(--border);border-radius:10px;margin-bottom:1.8rem;overflow:hidden}
+.qpfill{height:100%;background:linear-gradient(90deg,var(--purple),var(--teal));transition:width .4s ease}
+.qcard{background:var(--bg-c);border:1px solid var(--border);
+  border-radius:var(--rl);padding:1.8rem;margin-bottom:1rem}
+.qnum{font-family:var(--fm);font-size:.68rem;color:var(--purple);
+  letter-spacing:1.5px;margin-bottom:.7rem}
+.qtxt{font-family:var(--fd);font-size:1.05rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:1.3rem;line-height:1.4}
+.opts{display:flex;flex-direction:column;gap:.55rem}
+.opt{background:var(--bg-p);border:1px solid var(--border);border-radius:var(--r);
+  padding:.85rem 1.1rem;cursor:pointer;font-size:.87rem;
+  display:flex;align-items:center;gap:.75rem;transition:var(--tr)}
+.opt:hover{border-color:rgba(139,111,212,.4);background:rgba(139,111,212,.05)}
+.opt.sel{border-color:var(--purple);background:rgba(139,111,212,.1);color:var(--tw)}
+.opt.ok{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.opt.no{border-color:var(--red);background:rgba(224,85,85,.1);color:var(--red)}
+.ol{width:25px;height:25px;border-radius:50%;background:var(--border);
+  color:var(--tm);display:flex;align-items:center;justify-content:center;
+  font-family:var(--fm);font-size:.7rem;font-weight:700;flex-shrink:0}
+.opt.sel .ol{background:var(--purple);color:#fff}
+.opt.ok .ol{background:var(--green);color:#0D0900}
+.opt.no .ol{background:var(--red);color:#fff}
+.qact{display:flex;justify-content:space-between;align-items:center;margin-top:.9rem}
+.bqn{background:var(--purple);color:#fff;font-family:var(--fd);font-weight:700;
+  font-size:.88rem;padding:.72rem 1.7rem;border-radius:var(--r);
+  text-transform:uppercase;letter-spacing:1px;transition:var(--tr)}
+.bqn:hover{transform:translateY(-1px);box-shadow:0 4px 18px rgba(139,111,212,.35)}
+.bqn:disabled{background:var(--border);cursor:not-allowed;transform:none;color:var(--tm)}
+.qctr{font-family:var(--fm);font-size:.73rem;color:var(--tm)}
+.qres{background:var(--bg-c);border:1px solid var(--border);
+  border-radius:var(--rl);padding:2.2rem;text-align:center}
+.qring{width:110px;height:110px;border-radius:50%;border:3px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  margin:0 auto 1.3rem}
+.qring.pass{border-color:var(--green);box-shadow:0 0 28px rgba(76,175,125,.2)}
+.qring.fail{border-color:var(--red)}
+.qs{font-family:var(--fd);font-size:2.2rem;font-weight:800}
+.qs.pass{color:var(--green)}.qs.fail{color:var(--red)}
+.qsl{font-size:.67rem;color:var(--tm);text-transform:uppercase;letter-spacing:1px}
+.qrt{font-family:var(--fd);font-size:1.4rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:1.5px;margin-bottom:.4rem}
+.qrb{color:var(--tb);font-size:.84rem;margin-bottom:1.3rem;line-height:1.5}
+.bret{background:var(--bg-p);border:1px solid var(--border);color:var(--tm);
+  font-family:var(--fd);font-weight:700;font-size:.84rem;
+  padding:.65rem 1.4rem;border-radius:var(--r);text-transform:uppercase;
+  letter-spacing:.5px;cursor:pointer;transition:var(--tr);margin-right:.6rem}
+.bret:hover{color:var(--tw);border-color:var(--tm)}
+
+/* WALLET */
+.who{background:linear-gradient(135deg,#1A1200,#0E0E00,#1A1A0A);
+  border:1px solid var(--border-g);border-radius:var(--rl);
+  padding:2.5rem 2rem;text-align:center;margin-bottom:1.3rem;
+  position:relative;overflow:hidden}
+.who::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.who img{width:72px;height:72px;border-radius:50%;margin:0 auto 1rem;display:block;
+  filter:drop-shadow(0 0 18px rgba(201,168,67,.5))}
+.whl{font-family:var(--fh);font-size:.72rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:2px;color:var(--gold-d);margin-bottom:.4rem}
+.whp{font-family:var(--fd);font-size:5rem;font-weight:800;color:var(--gold);
+  line-height:1;letter-spacing:3px;text-shadow:0 0 50px rgba(201,168,67,.28)}
+.whs{color:var(--tm);font-family:var(--fm);font-size:.72rem;margin-top:.35rem;letter-spacing:1px}
+.wnotice{background:rgba(201,168,67,.05);border:1px solid var(--border-g);
+  border-radius:var(--r);padding:.95rem 1.1rem;margin-bottom:1.3rem;
+  font-size:.83rem;color:var(--tb);line-height:1.6}
+.wnotice strong{color:var(--gold)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:.9rem;margin-bottom:1.3rem}
+.rc{background:var(--bg-c);border:1px solid var(--border);
+  border-radius:var(--rl);padding:1.1rem;position:relative}
+.rc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,var(--gold),transparent)}
+.rct{font-family:var(--fh);font-size:.67rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;color:var(--tm)}
+.rcp{font-family:var(--fd);font-size:1.7rem;font-weight:700;
+  color:var(--gold);letter-spacing:1px;margin:.25rem 0}
+.rcn{font-size:.78rem;color:var(--tb)}
+.eh{background:var(--bg-c);border:1px solid var(--border);border-radius:var(--rl)}
+.ehh{padding:1rem 1.3rem;border-bottom:1px solid var(--border);
+  font-family:var(--fd);font-size:.88rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px}
+.ehi{display:flex;align-items:center;gap:.9rem;
+  padding:.8rem 1.3rem;border-bottom:1px solid var(--border);transition:var(--tr)}
+.ehi:last-child{border-bottom:none}
+.ehi:hover{background:var(--bg-c2)}
+.ehd{width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0}
+.ehn{font-family:var(--fh);font-size:.83rem;font-weight:600;color:var(--tw)}
+.eht{font-size:.68rem;color:var(--tm)}
+.ehp{font-family:var(--fd);font-size:.9rem;font-weight:700;color:var(--green);letter-spacing:.5px}
+.ehe{padding:1.8rem;text-align:center;color:var(--tm);font-size:.83rem}
+
+/* PROGRESS */
+.rm{position:relative;padding-left:2rem}
+.rm::before{content:'';position:absolute;left:10px;top:16px;bottom:16px;
+  width:2px;background:linear-gradient(180deg,var(--gold),var(--gold-d),var(--border));
+  border-radius:10px}
+.rs{position:relative;margin-bottom:.85rem}
+.rsd{position:absolute;left:-2rem;width:22px;height:22px;border-radius:50%;
+  border:2px solid var(--border);background:var(--bg-d);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fm);font-size:.6rem;font-weight:700;color:var(--tm);
+  z-index:1;transition:var(--tr)}
+.rsd.dn{background:var(--green);border-color:var(--green);color:#0D0900}
+.rsd.ac{background:var(--gold);border-color:var(--gold);color:#0D0900;
+  box-shadow:0 0 14px rgba(201,168,67,.45);animation:glow 1.5s ease infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 10px rgba(201,168,67,.3)}50%{box-shadow:0 0 22px rgba(201,168,67,.55)}}
+.rsc{background:var(--bg-c);border:1px solid var(--border);border-radius:var(--r);
+  padding:.95rem 1.2rem;display:flex;align-items:center;justify-content:space-between;
+  transition:var(--tr)}
+.rsc.dn{border-color:rgba(76,175,125,.2)}
+.rsc.ac{border-color:var(--border-g);background:var(--gold-bg)}
+.rst{font-family:var(--fd);font-weight:700;font-size:.86rem;
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:.1rem}
+.rst.dn{text-decoration:line-through;color:var(--tm)}
+.rst.ac{color:var(--gold)}
+.rsl{font-family:var(--fh);font-size:.7rem;color:var(--tm)}
+.rsi{font-size:1rem}
+
+/* BETA BANNER */
+.bb{background:linear-gradient(135deg,rgba(139,111,212,.08),rgba(74,191,191,.06));
+  border:1px solid rgba(139,111,212,.3);border-radius:var(--rl);
+  padding:1.7rem;margin-bottom:1.4rem}
+.btag{display:inline-block;background:var(--purple);color:#fff;
+  font-family:var(--fh);font-size:.67rem;font-weight:800;
+  padding:2px 10px;border-radius:20px;letter-spacing:1.5px;
+  text-transform:uppercase;margin-bottom:.7rem}
+.bb h3{font-family:var(--fd);font-size:1.15rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:1.5px;margin-bottom:.45rem}
+.bb p{color:var(--tb);font-size:.84rem;line-height:1.6}
+.bbrg{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:.75rem;margin-top:1.1rem}
+.bbi{background:var(--bg-p);border:1px solid var(--border);border-radius:var(--r);
+  padding:.85rem;display:flex;align-items:flex-start;gap:.55rem}
+.bbin{font-family:var(--fh);font-size:.8rem;font-weight:700;
+  color:var(--tw);text-transform:uppercase;letter-spacing:.3px}
+.bbis{font-size:.7rem;color:var(--tm);margin-top:.12rem}
+
+/* CERTS */
+.cgr2{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:1rem;margin-top:1.4rem}
+.certc{background:linear-gradient(135deg,#1A1200,#0F0F05);
+  border:1px solid var(--border-g);border-radius:var(--rl);
+  padding:1.6rem 1.4rem;text-align:center;position:relative;overflow:hidden}
+.certc.lkc{background:var(--bg-c);border-color:var(--border);opacity:.55}
+.certc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--gold),var(--gold-l),transparent)}
+.certc img{width:80px;height:80px;border-radius:var(--r);
+  margin:0 auto .7rem;display:block;
+  box-shadow:0 0 20px rgba(201,168,67,.2)}
+.certn{font-family:var(--fd);font-size:.92rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:.25rem}
+.certd{font-size:.74rem;color:var(--tb);line-height:1.4}
+.certs{display:inline-block;margin-top:.7rem;font-family:var(--fh);
+  font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:20px;
+  text-transform:uppercase;letter-spacing:.5px}
+.certs.e{background:rgba(76,175,125,.15);color:var(--green)}
+.certs.p{background:rgba(201,168,67,.12);color:var(--gold)}
+
+/* SECTION TITLE */
+.stit{font-family:var(--fd);font-size:.95rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:2px;margin-bottom:.9rem;color:var(--gold);
+  display:flex;align-items:center;gap:.7rem}
+.stit::after{content:'';flex:1;height:1px;
+  background:linear-gradient(90deg,var(--gold-d),transparent)}
+
+/* COMPLETION */
+.comp{max-width:580px;margin:4rem auto;text-align:center}
+.comp-logo{width:96px;height:96px;border-radius:50%;margin:0 auto 1.3rem;display:block;
+  filter:drop-shadow(0 0 28px rgba(201,168,67,.55));
+  animation:fadeUp .8s cubic-bezier(.34,1.56,.64,1) both}
+.comp-t{font-family:var(--fd);font-size:2.8rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:3px;color:var(--gold);
+  line-height:1;margin-bottom:.4rem;text-shadow:0 0 40px rgba(201,168,67,.28)}
+.comp-s{color:var(--tb);font-size:.9rem;margin-bottom:1.8rem;line-height:1.5}
+.comp-card{background:var(--bg-c);border:1px solid var(--border-g);
+  border-radius:var(--rl);padding:1.8rem;margin-bottom:1.4rem}
+.comp-pts{font-family:var(--fd);font-size:3.8rem;font-weight:800;
+  color:var(--gold);letter-spacing:3px;text-shadow:0 0 40px rgba(201,168,67,.25)}
+.comp-pl{font-family:var(--fm);font-size:.7rem;color:var(--tm);
+  margin-top:.25rem;letter-spacing:1px}
+.nftu{background:linear-gradient(135deg,rgba(139,111,212,.08),rgba(74,191,191,.06));
+  border:1px solid rgba(139,111,212,.25);border-radius:var(--r);
+  padding:1.3rem;margin-top:1.1rem}
+.nftu h4{font-family:var(--fd);font-size:.88rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;color:var(--purple);margin-bottom:.35rem}
+.nftu p{font-size:.83rem;color:var(--tb);line-height:1.5}
+.nftu img{width:100px;height:100px;border-radius:var(--r);
+  margin:.9rem auto 0;display:block;box-shadow:0 0 20px rgba(139,111,212,.3)}
+
+/* SPINNER */
+.spin2{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);
+  border-top-color:var(--gold);animation:spin .7s linear infinite;
+  margin:2rem auto;display:block}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  #sb{transform:translateX(-100%)}
+  #sb.on{transform:translateX(0)}
+  .ov.on{display:block}
+  .ham{display:flex}
+  #mc{margin-left:0;padding:1rem;padding-top:4rem}
+  .mgrid{grid-template-columns:1fr}
+  .sgrid{grid-template-columns:repeat(2,1fr)}
+  .wb{flex-direction:column;gap:.7rem}
+  .rgrid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="ls">
+  <img class="spin" src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/bafkreidzqht35iwdjpz5mpqk2j6oqrggidwdwekfkfbahq2u6z6x3hgzki" alt="GATA"/>
+  <img class="wordmark" src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/bafkreifnlfptjlvf65avie53vuug2uv3ahlzoyb5va46g4cz4om55xezey" alt="GATA Protocol"/>
+  <div class="lbar"><div class="lfill"></div></div>
+  <div class="ltag">INITIALIZING WEB3 ONBOARDING SYSTEM</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <img src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/bafkreidzqht35iwdjpz5mpqk2j6oqrggidwdwekfkfbahq2u6z6x3hgzki" alt=""/>
+  <div>
+    <div class="t-pts" id="t-pts">+50 GATA POINTS</div>
+    <div class="t-msg" id="t-msg">Lesson completed!</div>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div id="av">
+  <div class="acard">
+    <div class="abrand">
+      <img class="icon" src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/bafkreidzqht35iwdjpz5mpqk2j6oqrggidwdwekfkfbahq2u6z6x3hgzki" alt="GATA"/>
+      <img class="logo" src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/bafkreifnlfptjlvf65avie53vuug2uv3ahlzoyb5va46g4cz4om55xezey" alt="GATA Protocol"/>
+      <div class="tag">1BILLION2WEB3 — LEARN · EARN · BUILD</div>
+    </div>
+    <div class="atabs">
+      <button class="atab on" id="tab-li" onclick="swTab('li')">Sign In</button>
+      <button class="atab" id="tab-re" onclick="swTab('re')">Register</button>
+    </div>
+    <div id="aerr" class="aerr"></div>
+    <div id="form-li">
+      <div class="fg"><label>Email Address</label><input type="email" id="li-e" placeholder="your@email.com"/></div>
+      <div class="fg"><label>Password</label><input type="password" id="li-p" placeholder="••••••••"/></div>
+      <button class="bprim" id="b-li" onclick="doLi()">Sign In</button>
+    </div>
+    <div id="form-re" style="display:none">
+      <div class="fg"><label>Full Name</label><input type="text" id="re-n" placeholder="Your full name"/></div>
+      <div class="fg"><label>Email Address</label><input type="email" id="re-e" placeholder="your@email.com"/></div>
+      <div class="fg"><label>Password</label><input type="password" id="re-p" placeholder="Min 6 characters"/></div>
+      <button class="bprim" id="b-re" onclick="doRe()">Create Account</button>
+    </div>
+    <div class="adiv">or</div>
+    <button class="bgoog" onclick="doGoog()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.1 8 3l5.7-5.7C34.5 6.5 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.9 1.1 8 3l5.7-5.7C34.5 6.5 29.5 4 24 4c-7.7 0-14.4 4.4-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.4 35.5 26.8 36 24 36c-5.2 0-9.6-3-11.4-7.4l-6.5 5C9.5 39.5 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.9 2.6-2.6 4.8-4.9 6.3l6.2 5.2C42.4 36 44 30.4 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+      Continue with Google
+    </button>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="shell">
+  <button class="ham" id="ham" onclick="togSB()">☰</button>
+  <div class="ov" id="ov" onclick="togSB()"></div>
+  <nav id="sb">
+    <div class="sb-brand"><img src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/bafkreifnlfptjlvf65avie53vuug2uv3ahlzoyb5va46g4cz4om55xezey" alt="GATA Protocol"/></div>
+    <div class="sb-wallet" onclick="go('wallet')">
+      <div class="sw-label">🪙 GATA Points</div>
+      <div class="sw-pts" id="sb-p">0</div>
+      <div class="sw-sub">Tap to view wallet</div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">Platform</div>
+      <div class="ni on" id="n-dashboard" onclick="go('dashboard')"><span class="ni-ico">⊞</span>Dashboard</div>
+      <div class="ni" id="n-modules" onclick="go('modules')"><span class="ni-ico">📚</span>Modules</div>
+      <div class="ni" id="n-progress" onclick="go('progress')"><span class="ni-ico">🗺</span>Progress</div>
+      <div class="ni" id="n-wallet" onclick="go('wallet')"><span class="ni-ico">🪙</span>Wallet</div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">Community</div>
+      <div class="ni" onclick="open('https://discord.gg/gata','_blank')"><span class="ni-ico">💬</span>Discord</div>
+      <div class="ni" onclick="open('https://gataprotocol.io','_blank')"><span class="ni-ico">🌐</span>GATA Protocol</div>
+    </div>
+    <div class="sb-foot">
+      <div class="upill">
+        <div class="uav" id="u-av">G</div>
+        <div><div class="un" id="u-n">Loading...</div><div class="ue" id="u-e">—</div></div>
+      </div>
+      <button class="blog" onclick="doOut()">← Sign Out</button>
+    </div>
+  </nav>
+
+  <main id="mc">
+
+    <!-- DASHBOARD -->
+    <div class="view on" id="v-dashboard">
+      <div class="ph">
+        <div class="bc">Home</div>
+        <h2><span>GATA</span> Dashboard</h2>
+        <p>Your Web3 onboarding command centre. Complete all 12 modules to earn your NFT certificates.</p>
+      </div>
+      <div class="wb">
+        <img src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/bafkreidzqht35iwdjpz5mpqk2j6oqrggidwdwekfkfbahq2u6z6x3hgzki" alt=""/>
+        <div>
+          <h3 id="wb-h">Welcome to GATA Web3 Onboarding</h3>
+          <p>Complete all 12 modules to earn your <strong>1Billion2Web3 NFT Certificate</strong> and qualify for Beta Tester Rewards including a share of <strong>600,000 $GATA tokens</strong>.</p>
+        </div>
+      </div>
+      <div class="sgrid">
+        <div class="sc"><div class="sl">GATA Points</div><div class="sv cg" id="d-p">0</div><div class="ss">Learning wallet</div></div>
+        <div class="sc"><div class="sl">Modules Done</div><div class="sv cc" id="d-m">0/12</div><div class="ss">Complete all 12</div></div>
+        <div class="sc"><div class="sl">Lessons Done</div><div class="sv cgr" id="d-l">0</div><div class="ss">Keep going!</div></div>
+        <div class="sc"><div class="sl">Certificates</div><div class="sv cp" id="d-c">0</div><div class="ss">Unlock at 100%</div></div>
+      </div>
+      <div class="pw">
+        <div class="pm"><span class="pml">Overall Onboarding Progress</span><span class="pmp" id="ov-p">0%</span></div>
+        <div class="pt"><div class="pf" id="ov-f" style="width:0%"></div></div>
+      </div>
+      <div class="stit">Continue Learning</div>
+      <div class="mgrid" id="dg"><div class="spin2"></div></div>
+    </div>
+
+    <!-- MODULES -->
+    <div class="view" id="v-modules">
+      <div class="ph">
+        <div class="bc">Modules</div>
+        <h2>All <span>Modules</span></h2>
+        <p>12 structured modules from Web3 basics to building and selling on the GATA marketplace.</p>
+      </div>
+      <div class="mgrid" id="ag"><div class="spin2"></div></div>
+    </div>
+
+    <!-- MODULE DETAIL -->
+    <div class="view" id="v-module-detail">
+      <button class="bbtn" onclick="go('modules')">← Back to Modules</button>
+      <div id="mdc"><div class="spin2"></div></div>
+    </div>
+
+    <!-- LESSON -->
+    <div class="view" id="v-lesson">
+      <button class="bbtn" id="l-back">← Back to Module</button>
+      <div class="ph">
+        <div class="bc" id="l-crumb">Module › Lesson</div>
+        <h2 id="l-title">Loading...</h2>
+      </div>
+      <div class="ll">
+        <div>
+          <div class="vbox">
+            <div class="vph">
+              <div class="vpc">▶</div>
+              <div class="vpt">Lesson Video<br/><small>Add your IPFS/video URL to enable</small></div>
+              <div class="vpu" id="vpu">ipfs://...</div>
+            </div>
+          </div>
+          <div class="lctrl">
+            <div class="lcsaved" id="lsaved">▸ Progress auto-saved</div>
+            <button class="bcomplete" id="b-done" onclick="doneLesson()">✓ Mark Complete &amp; Earn Points</button>
+          </div>
+          <div class="lsum">
+            <h3>📖 Lesson Summary</h3>
+            <div class="lsc" id="lsc">Loading...</div>
+          </div>
+        </div>
+        <div>
+          <div class="lscard">
+            <h4>📑 Module Lessons</h4>
+            <div id="lnav"></div>
+          </div>
+          <div class="lscard">
+            <h4>🎯 Rewards</h4>
+            <div id="lrew"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUIZ -->
+    <div class="view" id="v-quiz">
+      <button class="bbtn" id="q-back">← Back to Module</button>
+      <div class="qwrap">
+        <div class="qhead">
+          <div class="qi">🧠</div>
+          <h2>1Billion2Web3 Knowledge Test</h2>
+          <p>Score 80% or higher to earn your certificate eligibility and +200 GATA Points</p>
+        </div>
+        <div class="qpbar"><div class="qpfill" id="qpf" style="width:0%"></div></div>
+        <div id="qq"></div>
+        <div class="qact">
+          <span class="qctr" id="qctr">Question 1 of 5</span>
+          <button class="bqn" id="b-qn" disabled onclick="nxtQ()">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- WALLET -->
+    <div class="view" id="v-wallet">
+      <div class="ph">
+        <div class="bc">Wallet</div>
+        <h2>GATA Points <span>Wallet</span></h2>
+        <p>Your learning rewards accumulate here as you complete modules.</p>
+      </div>
+      <div class="who">
+        <img src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/QmPpHdbxY459nnr6tgTDWdn7GAZTejFKBSmrQyinWvZ7z5" alt="GATA Token"/>
+        <div class="whl">Total GATA Points</div>
+        <div class="whp" id="w-p">0</div>
+        <div class="whs">LEARNING REWARD POINTS</div>
+      </div>
+      <div class="wnotice"><strong>⚠️ Important:</strong> GATA Points are <strong>not</strong> the same as GATA Tokens ($GATA). They are learning reward points earned by completing lessons. In the future, these points <strong>may be redeemable</strong> for GATA Token or ecosystem rewards.</div>
+      <div class="stit">Points Structure</div>
+      <div class="rgrid">
+        <div class="rc"><div class="rct">Per Lesson</div><div class="rcp">+50</div><div class="rcn">Lesson completion</div></div>
+        <div class="rc"><div class="rct">Per Module</div><div class="rcp">+150</div><div class="rcn">Full module bonus</div></div>
+        <div class="rc"><div class="rct">Quiz Pass</div><div class="rcp">+200</div><div class="rcn">Knowledge test</div></div>
+        <div class="rc"><div class="rct">Full Onboarding</div><div class="rcp">+1000</div><div class="rcn">Complete all 12</div></div>
+      </div>
+      <div class="stit">Earn History</div>
+      <div class="eh"><div class="ehh">Recent Activity</div><div id="ehl"><div class="ehe">No earnings yet. Start a lesson!</div></div></div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="view" id="v-progress">
+      <div class="ph">
+        <div class="bc">Progress</div>
+        <h2>My Learning <span>Roadmap</span></h2>
+        <p>Track your journey through the GATA ecosystem onboarding.</p>
+      </div>
+      <div class="bb">
+        <div class="btag">Beta Phase</div>
+        <h3>Early Adopter Rewards Active</h3>
+        <p>Complete onboarding during the beta phase to qualify for exclusive ecosystem rewards. Join the Discord beta channel and participate in platform testing.</p>
+        <div class="bbrg">
+          <div class="bbi"><span style="font-size:1.2rem;flex-shrink:0">🎓</span><div><div class="bbin">1Billion2Web3 NFT</div><div class="bbis">For all who complete onboarding</div></div></div>
+          <div class="bbi"><span style="font-size:1.2rem;flex-shrink:0">🎫</span><div><div class="bbin">Free GATA Pass NFT</div><div class="bbis">First 100 qualified participants</div></div></div>
+          <div class="bbi"><span style="font-size:1.2rem;flex-shrink:0">💎</span><div><div class="bbin">600,000 $GATA</div><div class="bbis">Token rewards pool share</div></div></div>
+        </div>
+      </div>
+      <div class="stit">Onboarding Roadmap</div>
+      <div class="rm" id="rm"><div class="spin2"></div></div>
+      <div class="stit" style="margin-top:1.8rem">Certificates &amp; NFTs</div>
+      <div class="cgr2">
+        <div class="certc">
+          <img src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/bafybeigzj5xxgvs7twbta5t2wz5ymvdf6hyd4zc6xeje6hsfdirntezog4" alt="1Billion2Web3 Certificate"/>
+          <div class="certn">1Billion2Web3 Certificate</div>
+          <div class="certd">Awarded upon completing all 12 modules and passing the Module 5 knowledge test</div>
+          <div class="certs p" id="cs1">Complete Module 5 Quiz</div>
+        </div>
+        <div class="certc">
+          <img src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/bafybeigspapwvzepfgei24ke4dhjfguk4atug7wgpk7cx7mcnuc2rtaiba" alt="GATA Pass NFT"/>
+          <div class="certn">GATA Pass Membership NFT</div>
+          <div class="certd">Grants access to the GATA marketplace, seller profiles, and ecosystem tools</div>
+          <div class="certs p" id="cs2">Complete All Modules</div>
+        </div>
+        <div class="certc lkc">
+          <span style="font-size:2.5rem;display:block;margin-bottom:.7rem">⭐</span>
+          <div class="certn">Beta Tester Reward</div>
+          <div class="certd">First 100 qualified beta participants. Join Discord to activate.</div>
+          <div class="certs p">Join Discord</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLETION -->
+    <div class="view" id="v-completion">
+      <div class="comp">
+        <img class="comp-logo" src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/bafkreidzqht35iwdjpz5mpqk2j6oqrggidwdwekfkfbahq2u6z6x3hgzki" alt="GATA"/>
+        <div class="comp-t">Congratulations</div>
+        <div class="comp-s">You've completed the <strong>1Billion2Web3</strong> onboarding program. You are now a certified GATA Protocol participant.</div>
+        <div class="comp-card">
+          <div class="comp-pts" id="cp-pts">0</div>
+          <div class="comp-pl">TOTAL GATA POINTS EARNED</div>
+          <div class="nftu">
+            <h4>🎫 NFT Eligibility Unlocked</h4>
+            <p>You are now eligible for your <strong>1Billion2Web3 NFT Certificate</strong> and <strong>GATA Pass Membership NFT</strong>. Smart contract minting will be triggered for all qualified participants.</p>
+            <img src="https://beige-able-dormouse-440.mypinata.cloud/ipfs/bafybeigspapwvzepfgei24ke4dhjfguk4atug7wgpk7cx7mcnuc2rtaiba" alt="GATA Pass NFT"/>
+          </div>
+        </div>
+        <button class="bprim" style="width:auto;padding:.85rem 2.5rem" onclick="go('progress')">View Certificates →</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCdiwp79_4Ui0jszBmtQFknvNX_uYSg9IA",
+  authDomain: "gata-web3-business-onboarding.firebaseapp.com",
+  projectId: "gata-web3-business-onboarding",
+  storageBucket: "gata-web3-business-onboarding.firebasestorage.app",
+  messagingSenderId: "595150614740",
+  appId: "1:595150614740:web:b728f4d17b247116af4b41",
+  measurementId: "G-DDC4L2QL3E"
+};
+
+// Init Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ── STATE ──────────────────────────────
+const S = {
+  user:null, points:0,
+  doneL:new Set(), doneM:new Set(),
+  hist:[], qpassed:false,
+  curM:null, curL:null,
+  qst:{cur:0,ans:[]}
+};
+
+// ── CURRICULUM ─────────────────────────
+const MODS=[
+  {id:"m1",n:1,title:"Welcome to GATA",desc:"Discover the GATA Protocol and how it empowers you to build a digital business with lower fees and higher earnings.",pts:50,icon:"🌐",
+   lessons:[{id:"m1l1",o:1,title:"Build Your Digital Store",sub:"Introduction to GATA Protocol",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>This lesson introduces the opportunity within the <strong>GATA Protocol</strong>.</p><p>The ecosystem allows you to:</p><ul><li><strong>Build a digital business</strong> that operates globally</li><li><strong>Sell products or services</strong> online with minimal friction</li><li><strong>Pay lower platform fees</strong> than traditional e-commerce</li><li><strong>Keep more profit</strong> from every transaction</li><li><strong>Earn incentives</strong> for participating in the ecosystem</li></ul><p>By the end of onboarding you will be able to create a storefront, list products, and start earning.</p>`}]},
+  {id:"m2",n:2,title:"Understanding the GATA Ecosystem",desc:"How the decentralized marketplace connects sellers, buyers, and logistics providers.",pts:100,icon:"⬡",
+   lessons:[
+     {id:"m2l1",o:1,title:"What is GATA Protocol",sub:"Decentralized marketplace overview",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>The <strong>GATA ecosystem</strong> is a decentralized marketplace connecting:</p><ul><li><strong>Sellers</strong> — vendors listing products and services</li><li><strong>Buyers</strong> — customers purchasing across the platform</li><li><strong>Logistics providers</strong> — delivery partners fulfilling orders</li></ul><p>The platform reduces costs and allows all participants to <strong>keep more value</strong> from every transaction.</p>`},
+     {id:"m2l2",o:2,title:"Community Marketplace",sub:"How the network grows together",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>The GATA Community Marketplace enables:</p><ul><li><strong>Product sales</strong> — list physical and digital goods</li><li><strong>Service listings</strong> — offer professional services</li><li><strong>Delivery coordination</strong> — integrated logistics network</li></ul><p>Every participant contributes to network growth.</p>`}
+   ]},
+  {id:"m3",n:3,title:"Create Your Wallet",desc:"A digital wallet is your gateway to Web3. Learn to set one up, secure it, and connect it to GATA.",pts:100,icon:"👛",
+   lessons:[
+     {id:"m3l1",o:1,title:"What is a Wallet",sub:"Digital identity and asset storage",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>A <strong>digital wallet</strong> stores digital assets and lets you interact with Web3:</p><ul><li><strong>Store tokens</strong> including GATA Token</li><li><strong>Store NFTs</strong> — your GATA Pass and certificates</li><li><strong>Approve transactions</strong> when buying, selling, or using smart contracts</li></ul><p>Popular options: <strong>MetaMask</strong> (browser) and <strong>Trust Wallet</strong> (mobile).</p>`},
+     {id:"m3l2",o:2,title:"Wallet Setup Guide",sub:"Install, secure, and connect",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>Steps to set up your wallet:</p><ul><li><strong>Install</strong> — MetaMask from metamask.io or Trust Wallet from the app store</li><li><strong>Create</strong> — follow the guided wallet setup</li><li><strong>Store</strong> your seed phrase safely offline — never share it</li><li><strong>Connect</strong> your wallet to GATA applications when prompted</li></ul><p>⚠️ Losing your seed phrase means losing access permanently.</p>`}
+   ]},
+  {id:"m4",n:4,title:"Web3 Basics",desc:"What Web3 is, how tokens work, and what NFTs represent in a decentralized economy.",pts:150,icon:"🕸",
+   lessons:[
+     {id:"m4l1",o:1,title:"What is Web3",sub:"The decentralized internet era",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p><strong>Web3</strong> is a shift in how the internet works:</p><ul><li><strong>Web1</strong> — Read-only static websites</li><li><strong>Web2</strong> — Apps and social media, but corporations own your data</li><li><strong>Web3</strong> — You own your digital assets and control your data</li></ul><p>Users interact through decentralized applications and wallets instead of corporate accounts.</p>`},
+     {id:"m4l2",o:2,title:"What are Tokens",sub:"Digital value and utility",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p><strong>Tokens</strong> represent value in blockchain ecosystems:</p><ul><li><strong>Payments</strong> — pay for goods, services, and fees</li><li><strong>Governance</strong> — vote on protocol decisions</li><li><strong>Rewards</strong> — earned by participating in the ecosystem</li></ul><p>The <strong>GATA Token ($GATA)</strong> serves all these functions.</p>`},
+     {id:"m4l3",o:3,title:"What are NFTs",sub:"Unique digital ownership",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p><strong>NFTs (Non-Fungible Tokens)</strong> represent unique ownership on blockchain:</p><ul><li><strong>Certificates</strong> — like the 1Billion2Web3 completion certificate</li><li><strong>Membership access</strong> — like the GATA Pass NFT</li><li><strong>Digital assets</strong> — artwork, collectibles, in-game items</li></ul>`}
+   ]},
+  {id:"m5",n:5,title:"1Billion2Web3 Orientation",desc:"Blockchain fundamentals, digital transactions, and the knowledge quiz for certificate eligibility.",pts:200,icon:"🎓",hasQuiz:true,
+   lessons:[
+     {id:"m5l1",o:1,title:"Blockchain Basics",sub:"How distributed ledgers work",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p><strong>Blockchain</strong> is a distributed ledger that records transactions transparently:</p><ul><li><strong>Decentralized</strong> — no single entity controls it</li><li><strong>Transparent</strong> — all transactions are visible on-chain</li><li><strong>Immutable</strong> — once recorded, data cannot be altered</li><li><strong>Secure</strong> — cryptographic proofs protect every entry</li></ul>`},
+     {id:"m5l2",o:2,title:"Transactions",sub:"Sending tokens and smart contracts",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>A <strong>blockchain transaction</strong>:</p><ul><li><strong>Peer-to-peer</strong> — sent directly between wallets</li><li><strong>Gas fees</strong> — small fees paid to the network</li><li><strong>Smart contracts</strong> — self-executing code automating conditions</li><li><strong>Finality</strong> — once confirmed, cannot be reversed</li></ul>`},
+     {id:"m5q",o:3,title:"Knowledge Test",sub:"Quiz — Required for certificate",isQuiz:true,vid:"",sum:`<p>Complete the <strong>1Billion2Web3 Knowledge Test</strong>.</p><ul><li>Score 80% or higher to pass</li><li>Earn <strong>+200 GATA Points</strong></li><li>Unlock the <strong>1Billion2Web3 NFT Certificate</strong></li></ul>`}
+   ]},
+  {id:"m6",n:6,title:"Membership NFT",desc:"The GATA Pass NFT is your key to the marketplace, seller profiles, and platform tools.",pts:150,icon:"🎫",
+   lessons:[{id:"m6l1",o:1,title:"GATA Pass NFT",sub:"Your ecosystem access key",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>The <strong>GATA Pass Membership NFT</strong> grants ecosystem access:</p><ul><li><strong>Participate in the marketplace</strong> — list and sell products</li><li><strong>Create seller profiles</strong> — establish your digital business</li><li><strong>Access platform tools</strong> — analytics, messaging, orders</li><li><strong>Receive rewards</strong> — earn incentives for platform activity</li></ul><p>Beta testers who complete onboarding qualify for a <strong>free GATA Pass NFT</strong> (first 100).</p>`}]},
+  {id:"m7",n:7,title:"GATA Token",desc:"The ecosystem token — payments, incentives, and platform interaction.",pts:100,icon:"🪙",
+   lessons:[{id:"m7l1",o:1,title:"GATA Token Overview",sub:"The ecosystem currency",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>The <strong>GATA Token ($GATA)</strong>:</p><ul><li><strong>Pay fees</strong> — reduced fees when using $GATA</li><li><strong>Earn incentives</strong> — for participating actively</li><li><strong>Governance</strong> — vote on ecosystem decisions</li></ul><p>Beta testers share a pool of <strong>600,000 $GATA tokens</strong>.</p>`}]},
+  {id:"m8",n:8,title:"Cash In and Cash Out",desc:"Convert between fiat and crypto — essential for Nigerian participants.",pts:100,icon:"💱",
+   lessons:[{id:"m8l1",o:1,title:"Fiat to Crypto and Back",sub:"Nigeria-focused guide",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p><strong>Cash In:</strong> Naira (NGN) → P2P Exchange → USDT/BNB → GATA Token</p><p><strong>Cash Out:</strong> GATA Token → USDT/BNB → P2P Exchange → Naira (NGN) → Bank</p><p>Recommended for Nigeria: <strong>Binance P2P</strong>, <strong>Bybit P2P</strong>, <strong>Yellow Card</strong>.</p>`}]},
+  {id:"m9",n:9,title:"Create Your Storefront",desc:"Build your digital business — a vendor shop or logistics service profile.",pts:200,icon:"🏪",
+   lessons:[
+     {id:"m9l1",o:1,title:"Build Your Profile",sub:"Identity and business details",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>Your <strong>GATA Profile</strong> is your digital identity:</p><ul><li>Name and business name</li><li>Profile photo and description</li><li>Wallet address for receiving payments</li></ul>`},
+     {id:"m9l2",o:2,title:"Set Up Your Storefront",sub:"For vendors and logistics providers",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p><strong>For vendors:</strong> An online shop for customers to browse and buy.<br/><strong>For logistics providers:</strong> A delivery service profile with coverage and rates.</p>`},
+     {id:"m9l3",o:3,title:"Storefront Branding",sub:"Stand out in the marketplace",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>Strong branding differentiates your business: logo, banner, colour scheme, compelling description, and social proof from early reviews.</p>`}
+   ]},
+  {id:"m10",n:10,title:"List Products or Services",desc:"Publish listings that attract customers — from adding products to setting pricing.",pts:200,icon:"📦",
+   lessons:[
+     {id:"m10l1",o:1,title:"Add Product or Service",sub:"Creating your first listing",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>A strong listing needs: clear <strong>title</strong>, detailed <strong>description</strong>, quality <strong>photos</strong>, and correct <strong>category</strong>.</p>`},
+     {id:"m10l2",o:2,title:"Set Your Pricing",sub:"Competitive pricing strategy",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>Research competitor pricing. Factor in GATA platform fees (lower than traditional platforms). Consider introductory discounts.</p>`},
+     {id:"m10l3",o:3,title:"Publish Your Listing",sub:"Go live on the marketplace",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>Before publishing verify: ✅ All fields complete ✅ Quality photos ✅ Correct pricing ✅ Wallet connected ✅ Delivery details set.</p>`}
+   ]},
+  {id:"m11",n:11,title:"Start Selling",desc:"How the full transaction flow works — buyer to seller to logistics to delivery.",pts:200,icon:"💸",
+   lessons:[{id:"m11l1",o:1,title:"Marketplace Transaction Flow",sub:"Buyer → Seller → Logistics → Delivery",vid:"ipfs://YOUR_VIDEO_CID",sum:`<ol style="padding-left:1.3rem"><li style="margin-bottom:.45rem"><strong>Buyer</strong> places order — payment locked in escrow</li><li style="margin-bottom:.45rem"><strong>Seller</strong> prepares item</li><li style="margin-bottom:.45rem"><strong>Logistics</strong> picks up and delivers</li><li style="margin-bottom:.45rem"><strong>Buyer confirms</strong> — funds released automatically</li><li><strong>Delivery fee</strong> sent to logistics provider</li></ol>`}]},
+  {id:"m12",n:12,title:"Beta Tester Rewards",desc:"Qualify for exclusive beta rewards including free NFTs and $GATA distribution.",pts:300,icon:"⭐",
+   lessons:[{id:"m12l1",o:1,title:"How to Qualify as Beta Tester",sub:"Exclusive rewards for early adopters",vid:"ipfs://YOUR_VIDEO_CID",sum:`<p>To qualify:</p><ul><li>✅ Complete all 12 modules</li><li>✅ Join the <strong>Discord beta testers channel</strong></li><li>✅ Participate in product testing</li></ul><p><strong>Rewards:</strong></p><ul><li>🎓 1Billion2Web3 NFT Certificate</li><li>🎫 Free GATA Pass NFT (first 100)</li><li>💎 Share of 600,000 $GATA tokens</li></ul><p>Join: <strong>discord.gg/gata</strong></p>`}]}
+];
+
+const AL={};
+MODS.forEach(m=>m.lessons.forEach(l=>{l.mid=m.id;AL[l.id]=l}));
+
+const QUIZ=[
+  {q:"What does Web3 primarily give users that Web2 does not?",o:["Faster internet speeds","Ownership of digital assets and data","More social media features","Better graphic design tools"],c:1},
+  {q:"What is a blockchain?",o:["A cryptocurrency exchange","A software wallet","A distributed immutable ledger recording transactions","A social platform for crypto users"],c:2},
+  {q:"What is the purpose of your wallet seed phrase?",o:["Your platform username","Recovers wallet access if lost","Shared with the platform to verify identity","Your email password"],c:1},
+  {q:"Which best describes an NFT?",o:["A fungible payment token","A unique digital token representing specific ownership","A type of exchange","An international money transfer method"],c:1},
+  {q:"What does a smart contract do in the GATA marketplace?",o:["Displays product listings","Automatically executes transaction rules without intermediaries","Translates currencies","Sends marketing emails"],c:1}
+];
+
+// ── AUTH UI ───────────────────────────
+function swTab(t){
+  ["li","re"].forEach(x=>{
+    document.getElementById("tab-"+x).classList.toggle("on",x===t);
+    document.getElementById("form-"+x).style.display=x===t?"block":"none";
+  });
+  document.getElementById("aerr").style.display="none";
+}
+function setErr(m){const e=document.getElementById("aerr");e.textContent=m;e.style.display="block"}
+function fmsg(c){
+  return({"auth/user-not-found":"No account with this email.","auth/wrong-password":"Incorrect password.","auth/email-already-in-use":"Account already exists.","auth/invalid-email":"Invalid email address.","auth/too-many-requests":"Too many attempts, try later."})[c]||"An error occurred."
+}
+
+async function doLi(){
+  const e=document.getElementById("li-e").value.trim(),p=document.getElementById("li-p").value;
+  if(!e||!p){setErr("Please fill all fields.");return}
+  document.getElementById("b-li").textContent="Signing in...";
+  try{await auth.signInWithEmailAndPassword(e,p)}
+  catch(err){setErr(fmsg(err.code));document.getElementById("b-li").textContent="Sign In"}
+}
+async function doRe(){
+  const n=document.getElementById("re-n").value.trim(),e=document.getElementById("re-e").value.trim(),p=document.getElementById("re-p").value;
+  if(!n||!e||!p){setErr("Please fill all fields.");return}
+  if(p.length<6){setErr("Password must be 6+ characters.");return}
+  document.getElementById("b-re").textContent="Creating...";
+  try{
+    const c=await auth.createUserWithEmailAndPassword(e,p);
+    await c.user.updateProfile({displayName:n});
+    const ts=firebase.firestore.FieldValue.serverTimestamp();
+    await db.collection("users").doc(c.user.uid).set({name:n,email:e,walletAddress:"",joinedAt:ts});
+    await db.collection("wallet_points").doc(c.user.uid).set({points:0,history:[],updatedAt:ts});
+    await db.collection("progress").doc(c.user.uid).set({cl:[],cm:[],qp:false,updatedAt:ts});
+  }catch(err){setErr(fmsg(err.code));document.getElementById("b-re").textContent="Create Account"}
+}
+async function doGoog(){
+  try{
+    const p=new firebase.auth.GoogleAuthProvider();
+    const c=await auth.signInWithPopup(p);
+    const ref=db.collection("users").doc(c.user.uid);
+    const snap=await ref.get();
+    if(!snap.exists){
+      const ts=firebase.firestore.FieldValue.serverTimestamp();
+      await ref.set({name:c.user.displayName,email:c.user.email,walletAddress:"",joinedAt:ts});
+      await db.collection("wallet_points").doc(c.user.uid).set({points:0,history:[],updatedAt:ts});
+      await db.collection("progress").doc(c.user.uid).set({cl:[],cm:[],qp:false,updatedAt:ts});
+    }
+  }catch(err){setErr(fmsg(err.code))}
+}
+async function doOut(){await auth.signOut()}
+
+// ── INIT ──────────────────────────────
+function hideLdr(){
+  const l=document.getElementById("ls");
+  if(!l||l.style.display==="none")return;
+  l.style.transition="opacity .5s";
+  l.style.opacity="0";
+  setTimeout(()=>{l.style.display="none";},520);
+}
+function showAuth(){
+  document.getElementById("av").style.display="flex";
+}
+
+// STEP 1: Always dismiss the loader after 2.5s — no exceptions.
+// The loader is cosmetic only. It must NEVER block the UI.
+setTimeout(()=>{
+  hideLdr();
+  // STEP 2: After loader hides, check if Firebase already resolved auth.
+  // If user is logged in the app will already be visible; if not, show auth.
+  setTimeout(()=>{
+    const shell=document.getElementById("shell");
+    const av=document.getElementById("av");
+    // Only show auth if the app shell is not already open
+    if(!shell.classList.contains("on") && av.style.display!=="flex"){
+      showAuth();
+    }
+  },550);
+},2500);
+
+// STEP 3: Firebase auth listener runs independently in background.
+// If user is already signed in it will call enterApp immediately.
+// If not signed in it shows auth (may already be shown from step 2 — that's fine).
+auth.onAuthStateChanged(async user=>{
+  hideLdr(); // also dismiss loader if it's still showing
+  if(user){
+    document.getElementById("av").style.display="none";
+    await enterApp(user);
+  } else {
+    showAuth();
+  }
+});
+
+async function enterApp(user){
+  S.user=user;
+  document.getElementById("av").style.display="none";
+  document.getElementById("shell").classList.add("on");
+  const nm=user.displayName||user.email.split("@")[0];
+  document.getElementById("u-n").textContent=nm;
+  document.getElementById("u-e").textContent=user.email||"";
+  document.getElementById("u-av").textContent=nm[0].toUpperCase();
+  document.getElementById("wb-h").textContent="Welcome back, "+nm+" 👋";
+  await loadProg();
+  renderDash();
+}
+
+async function loadProg(){
+  try{
+    const uid=S.user.uid;
+    const w=await db.collection("wallet_points").doc(uid).get();
+    const pr=await db.collection("progress").doc(uid).get();
+    if(w.exists){const d=w.data();S.points=d.points||0;S.hist=d.history||[]}
+    if(pr.exists){const d=pr.data();S.doneL=new Set(d.cl||[]);S.doneM=new Set(d.cm||[]);S.qpassed=d.qp||false}
+  }catch(e){console.error("loadProg:",e)}
+}
+
+async function save(){
+  try{
+    const uid=S.user.uid;
+    const ts=firebase.firestore.FieldValue.serverTimestamp();
+    await db.collection("progress").doc(uid).set({cl:[...S.doneL],cm:[...S.doneM],qp:S.qpassed,updatedAt:ts},{merge:true});
+    await db.collection("wallet_points").doc(uid).set({points:S.points,history:S.hist.slice(0,50),updatedAt:ts},{merge:true});
+  }catch(e){console.error("save:",e)}
+}
+
+// ── ROUTING ───────────────────────────
+function go(v,p={}){
+  closeSB();
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll(".ni").forEach(x=>x.classList.remove("on"));
+  const ve=document.getElementById("v-"+v);if(ve)ve.classList.add("on");
+  const ne=document.getElementById("n-"+v);if(ne)ne.classList.add("on");
+  if(v==="dashboard")renderDash();
+  if(v==="modules")renderMods();
+  if(v==="wallet")renderWallet();
+  if(v==="progress")renderProg();
+  if(v==="module-detail")renderModDetail(p.mid);
+  if(v==="lesson")renderLesson(p.mid,p.lid);
+  if(v==="quiz")renderQuiz(p.mid);
+  window.scrollTo(0,0);
+}
+
+// ── DASHBOARD ─────────────────────────
+function updStats(){
+  const tl=MODS.reduce((a,m)=>a+m.lessons.length,0);
+  const dl=[...S.doneL].length,dm=S.doneM.size;
+  const pct=Math.round(dl/tl*100);
+  document.getElementById("d-p").textContent=S.points.toLocaleString();
+  document.getElementById("d-m").textContent=dm+"/12";
+  document.getElementById("d-l").textContent=dl;
+  document.getElementById("d-c").textContent=S.qpassed?"1":"0";
+  document.getElementById("ov-p").textContent=pct+"%";
+  document.getElementById("ov-f").style.width=pct+"%";
+  document.getElementById("sb-p").textContent=S.points.toLocaleString();
+  const wp=document.getElementById("w-p");if(wp)wp.textContent=S.points.toLocaleString();
+}
+function renderDash(){updStats();document.getElementById("dg").innerHTML=MODS.slice(0,6).map(mCard).join("")}
+
+function mCard(m){
+  const done=S.doneM.has(m.id),lk=isLk(m),active=!done&&!lk;
+  const dl=m.lessons.filter(l=>S.doneL.has(l.id)).length;
+  const bc=done?"bd":active?"ba":"bl", bt=done?"✓ COMPLETE":active?"▶ ACTIVE":"LOCKED";
+  const cc="mc"+(done?" done":"")+(lk?" lk":"");
+  const cl=lk?"":`onclick="go('module-detail',{mid:'${m.id}'})"`;
+  return`<div class="${cc}" ${cl}>
+    <div class="mc-top"><div class="mc-num">MODULE ${String(m.n).padStart(2,"0")} ${m.icon}</div><span class="badge ${bc}">${bt}</span></div>
+    <div class="mc-title">${m.title}</div>
+    <div class="mc-desc">${m.desc}</div>
+    <div class="mc-foot"><span class="mc-less">${dl}/${m.lessons.length} lessons</span><span class="mc-pts">+${m.pts} PTS</span></div>
+  </div>`;
+}
+function isLk(m){if(m.n===1)return false;const p=MODS.find(x=>x.n===m.n-1);return p&&!S.doneM.has(p.id)}
+function renderMods(){document.getElementById("ag").innerHTML=MODS.map(mCard).join("")}
+
+// ── MODULE DETAIL ─────────────────────
+function renderModDetail(mid){
+  const m=MODS.find(x=>x.id===mid);if(!m){go("modules");return}
+  S.curM=mid;
+  const lk=isLk(m),dl=m.lessons.filter(l=>S.doneL.has(l.id)).length;
+  const lsHTML=m.lessons.map((l,i)=>{
+    const d=S.doneL.has(l.id),llk=lk||(i>0&&!S.doneL.has(m.lessons[i-1].id));
+    const ic=llk?"l":d?"d":"a", ico=llk?"🔒":d?"✓":l.isQuiz?"📝":"▶";
+    const cl=llk?"":(l.isQuiz?`onclick="go('quiz',{mid:'${mid}'})"`:  `onclick="go('lesson',{mid:'${mid}',lid:'${l.id}'})"` );
+    return`<div class="lc ${d?"done":""} ${llk?"lk":""}" ${cl}>
+      <div class="lico ${ic}">${ico}</div>
+      <div class="lt">${l.title}</div>
+      <div class="ls">${l.sub||""}</div>
+      <div class="la">›</div>
+    </div>`;
+  }).join("");
+  document.getElementById("mdc").innerHTML=`
+    <div class="mhero" data-n="${m.n}">
+      <div class="mn">MODULE ${String(m.n).padStart(2,"0")} — ${m.icon} ${m.title.toUpperCase()}</div>
+      <div class="mt">${m.title}</div>
+      <div class="md">${m.desc}</div>
+      <div class="mm">
+        <div class="mmi"><span>📚</span><span><strong>${m.lessons.length}</strong> Lessons</span></div>
+        <div class="mmi"><span>🪙</span><span><strong>+${m.pts}</strong> GATA Points</span></div>
+        <div class="mmi"><span>✅</span><span><strong>${dl}/${m.lessons.length}</strong> Done</span></div>
+        ${m.hasQuiz?'<div class="mmi"><span>📝</span><span>Includes <strong>Quiz</strong></span></div>':""}
+      </div>
+    </div>
+    <div class="stit">Lessons</div>
+    <div class="llist">${lsHTML}</div>`;
+}
+
+// ── LESSON ────────────────────────────
+function renderLesson(mid,lid){
+  const m=MODS.find(x=>x.id===mid),l=AL[lid];
+  if(!m||!l){go("modules");return}
+  S.curM=mid;S.curL=lid;
+  const done=S.doneL.has(lid);
+  document.getElementById("l-crumb").textContent=m.title+" › Lesson "+l.o;
+  document.getElementById("l-title").textContent=l.title;
+  document.getElementById("vpu").textContent=l.vid||"No video configured";
+  document.getElementById("lsc").innerHTML=l.sum;
+  document.getElementById("l-back").onclick=()=>go("module-detail",{mid});
+  const bd=document.getElementById("b-done");
+  bd.disabled=done;bd.textContent=done?"✓ Already Completed":"✓ Mark Complete & Earn Points";
+  document.getElementById("lnav").innerHTML=m.lessons.map(x=>{
+    const d=S.doneL.has(x.id),cur=x.id===lid;
+    const cl=x.isQuiz?`onclick="go('quiz',{mid:'${mid}'})"`:  `onclick="go('lesson',{mid:'${mid}',lid:'${x.id}'})"`;
+    return`<div class="lni ${cur?"cur":""} ${d?"dn":""}" ${cl}><div class="lnd"></div>${x.title}</div>`;
+  }).join("");
+  document.getElementById("lrew").innerHTML=`
+    <div style="margin-bottom:.65rem">
+      <div style="font-size:.68rem;color:var(--tm);font-family:var(--fh);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:.25rem">This Lesson</div>
+      <div style="display:inline-flex;align-items:center;gap:.35rem;background:var(--gold-bg);border:1px solid var(--border-g);padding:3px 10px;border-radius:20px;font-family:var(--fd);font-size:.8rem;font-weight:700;color:var(--gold)">🪙 +50 GATA Points</div>
+    </div>
+    <div>
+      <div style="font-size:.68rem;color:var(--tm);font-family:var(--fh);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:.25rem">Module Total</div>
+      <div style="display:inline-flex;align-items:center;gap:.35rem;background:var(--gold-bg);border:1px solid var(--border-g);padding:3px 10px;border-radius:20px;font-family:var(--fd);font-size:.8rem;font-weight:700;color:var(--gold)">⬡ +${m.pts} pts</div>
+    </div>`;
+}
+
+async function doneLesson(){
+  const{curL:lid,curM:mid}=S;
+  if(!lid||S.doneL.has(lid))return;
+  S.doneL.add(lid);
+  const m=MODS.find(x=>x.id===mid);
+  const allDone=m&&m.lessons.every(l=>S.doneL.has(l.id)||l.isQuiz);
+  let pts=50,msg="Lesson completed!";
+  if(allDone&&!S.doneM.has(mid)){S.doneM.add(mid);pts+=m.pts;msg=m.title+" module complete!"}
+  await addPts(pts,msg);
+  document.getElementById("b-done").disabled=true;
+  document.getElementById("b-done").textContent="✓ Already Completed";
+  document.getElementById("lsaved").textContent="✓ Saved!";
+  await save();updStats();
+  if(S.doneM.size===MODS.length){
+    setTimeout(async()=>{await addPts(1000,"🏆 Full onboarding complete!");document.getElementById("cp-pts").textContent=S.points.toLocaleString();go("completion");},2000);
+  }
+}
+
+// ── QUIZ ──────────────────────────────
+function renderQuiz(mid){
+  S.curM=mid;S.qst={cur:0,ans:Array(QUIZ.length).fill(null)};
+  document.getElementById("q-back").onclick=()=>go("module-detail",{mid});
+  document.getElementById("b-qn").style.display="";
+  document.getElementById("qctr").textContent="";
+  showQ(0);
+}
+function showQ(i){
+  const q=QUIZ[i],tot=QUIZ.length;
+  document.getElementById("qpf").style.width=(i/tot*100)+"%";
+  document.getElementById("qctr").textContent="Question "+(i+1)+" of "+tot;
+  document.getElementById("b-qn").disabled=true;
+  document.getElementById("b-qn").textContent=i<tot-1?"Next →":"Submit Quiz";
+  document.getElementById("qq").innerHTML=`
+    <div class="qcard">
+      <div class="qnum">QUESTION ${i+1} OF ${tot}</div>
+      <div class="qtxt">${q.q}</div>
+      <div class="opts">${q.o.map((o,j)=>`<div class="opt" id="op${j}" onclick="pickOpt(${j})"><div class="ol">${"ABCD"[j]}</div>${o}</div>`).join("")}</div>
+    </div>`;
+}
+function pickOpt(i){
+  S.qst.ans[S.qst.cur]=i;
+  document.querySelectorAll(".opt").forEach(o=>o.classList.remove("sel"));
+  document.getElementById("op"+i).classList.add("sel");
+  document.getElementById("b-qn").disabled=false;
+}
+function nxtQ(){
+  const{cur:i,ans}=S.qst,tot=QUIZ.length,c=QUIZ[i].c,ch=ans[i];
+  if(ch===c){document.getElementById("op"+ch).className="opt ok";const ol=document.getElementById("op"+ch).querySelector(".ol");ol.style.background="var(--green)";ol.style.color="#0D0900"}
+  else{
+    if(ch!==null){document.getElementById("op"+ch).className="opt no"}
+    document.getElementById("op"+c).className="opt ok";
+  }
+  document.getElementById("b-qn").disabled=true;
+  if(i<tot-1){S.qst.cur++;setTimeout(()=>showQ(S.qst.cur),900)}
+  else setTimeout(finishQuiz,900);
+}
+async function finishQuiz(){
+  const{ans}=S.qst;
+  const correct=QUIZ.filter((_,i)=>ans[i]===QUIZ[i].c).length;
+  const score=Math.round(correct/QUIZ.length*100),pass=score>=80;
+  document.getElementById("qpf").style.width="100%";
+  document.getElementById("qq").innerHTML=`
+    <div class="qres">
+      <div class="qring ${pass?"pass":"fail"}">
+        <div class="qs ${pass?"pass":"fail"}">${score}%</div>
+        <div class="qsl">${correct}/${QUIZ.length} correct</div>
+      </div>
+      <div class="qrt">${pass?"🎉 Quiz Passed!":"📚 Study More"}</div>
+      <div class="qrb">${pass?"You've demonstrated solid Web3 knowledge. You are now eligible for the 1Billion2Web3 NFT Certificate!":"You need 80% or higher. Review the lessons and try again."}</div>
+      ${!pass?`<button class="bret" onclick="renderQuiz(S.curM)">Try Again</button>`:""}
+      ${pass?`<button class="bprim" style="width:auto;padding:.68rem 1.6rem" onclick="go('module-detail',{mid:S.curM})">Continue →</button>`:""}
+    </div>`;
+  document.getElementById("b-qn").style.display="none";
+  document.getElementById("qctr").textContent="";
+  if(pass&&!S.qpassed){
+    S.qpassed=true;
+    const m=MODS.find(x=>x.id===S.curM);
+    if(m){const ql=m.lessons.find(l=>l.isQuiz);if(ql)S.doneL.add(ql.id)}
+    await addPts(200,"🎓 Quiz passed! Certificate eligibility unlocked");
+    await save();updStats();
+  }
+}
+
+// ── WALLET ────────────────────────────
+function renderWallet(){
+  document.getElementById("w-p").textContent=S.points.toLocaleString();
+  const el=document.getElementById("ehl");
+  if(!S.hist.length){el.innerHTML='<div class="ehe">No earnings yet. Start a lesson to earn GATA Points!</div>';return}
+  el.innerHTML=S.hist.slice(0,20).map(h=>`
+    <div class="ehi"><div class="ehd"></div>
+      <div style="flex:1"><div class="ehn">${h.d}</div><div class="eht">${h.t}</div></div>
+      <div class="ehp">+${h.p}</div>
+    </div>`).join("");
+}
+
+// ── PROGRESS ──────────────────────────
+function renderProg(){
+  document.getElementById("rm").innerHTML=MODS.map(m=>{
+    const dn=S.doneM.has(m.id),lk=isLk(m),ac=!dn&&!lk;
+    const dc=lk?"":dn?"dn":ac?"ac":"",cc=dn?"dn":ac?"ac":"";
+    const ic=lk?"🔒":dn?"✅":ac?"▶":"⬜";
+    const dl=m.lessons.filter(l=>S.doneL.has(l.id)).length;
+    return`<div class="rs">
+      <div class="rsd ${dc}">${m.n}</div>
+      <div class="rsc ${cc}" style="${lk?"":"cursor:pointer"}" onclick="${lk?"":  `go('module-detail',{mid:'${m.id}'})` }">
+        <div>
+          <div class="rst ${dn?"dn":ac?"ac":""}">${m.icon} ${m.title}</div>
+          <div class="rsl">${dl}/${m.lessons.length} lessons · +${m.pts} pts</div>
+        </div>
+        <div class="rsi">${ic}</div>
+      </div>
+    </div>`;
+  }).join("");
+  document.getElementById("cs1").textContent=S.qpassed?"✓ Earned":"Complete Module 5 Quiz";
+  document.getElementById("cs1").className="certs "+(S.qpassed?"e":"p");
+  document.getElementById("cs2").textContent=S.doneM.size===MODS.length?"✓ Earned":"Complete All Modules";
+  document.getElementById("cs2").className="certs "+(S.doneM.size===MODS.length?"e":"p");
+}
+
+// ── POINTS ────────────────────────────
+async function addPts(p,desc){
+  S.points+=p;
+  S.hist.unshift({p,d:desc,t:new Date().toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"})});
+  document.getElementById("sb-p").textContent=S.points.toLocaleString();
+  showToast(p,desc);
+}
+function showToast(p,msg){
+  const t=document.getElementById("toast");
+  document.getElementById("t-pts").textContent="+"+p+" GATA POINTS";
+  document.getElementById("t-msg").textContent=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),3500);
+}
+
+// ── SIDEBAR ───────────────────────────
+function togSB(){
+  document.getElementById("sb").classList.toggle("on");
+  document.getElementById("ov").classList.toggle("on");
+}
+function closeSB(){
+  document.getElementById("sb").classList.remove("on");
+  document.getElementById("ov").classList.remove("on");
+}
+</script>
+</body>
+</html>
